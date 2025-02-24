@@ -4,6 +4,13 @@ An implementation of the [RFC 8785 JSON Canonicalization Scheme (JCS)](https://w
 
 Formerly part of [titanium-json-ld](https://github.com/filip26/titanium-json-ld).
 
+[![Java 8 CI](https://github.com/filip26/titanium-jcs/actions/workflows/java8-build.yml/badge.svg)](https://github.com/filip26/titanium-jcs/actions/workflows/java8-build.yml)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
+[![Maven Central](https://img.shields.io/maven-central/v/com.apicatalog/titanium-jcs.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:com.apicatalog%20AND%20a:titanium-jcs)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+
 ## Resources
 
 - [RFC 8785 JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785)
