@@ -19,7 +19,7 @@ import jakarta.json.JsonValue;
 class JsonCanonicalizerTest {
 
     @ParameterizedTest
-    @ValueSource(strings = { "primitive-data-types", "uni-sort", "array", "object" })
+    @ValueSource(strings = { "primitive-data-types", "uni-sort", "array", "object", "unicode", "french" })
     void testCanonize(String name) throws IOException {
         assertEquals(getResource(name + ".out.json"), JsonCanonicalizer.canonize(getJson(name + ".in.json")));
     }
