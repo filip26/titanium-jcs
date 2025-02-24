@@ -149,19 +149,15 @@ public final class JsonCanonicalizer {
         final String numberString;
 
         if (number.bigDecimalValue().compareTo(BigDecimal.ZERO) == 0) {
-
             numberString = "0";
 
         } else if (number.bigDecimalValue().compareTo(BigDecimal.ONE.movePointRight(21)) >= 0) {
-
             numberString = eFormatBigDecimal.format(number.bigDecimalValue()).replace("E", "e+");
 
         } else if (number.bigDecimalValue().compareTo(BigDecimal.ONE.movePointLeft(21)) <= 0) {
-
             numberString = eFormatBigDecimal.format(number.bigDecimalValue()).toLowerCase();
 
         } else {
-
             numberString = eFormat.format(number.bigDecimalValue());
         }
 
