@@ -55,6 +55,20 @@ public final class JsonCanonicalizer {
 
     private static final DecimalFormat eFormat = new DecimalFormat("0.#######", new DecimalFormatSymbols(Locale.ENGLISH));
 
+    /**
+     * Canonicalizes a JSON value according to the RFC 8785 JSON Canonicalization
+     * Scheme (JCS) and returns the canonicalized JSON as a string.
+     * <p>
+     * This method serializes the given {@link JsonValue} in a deterministic and
+     * standardized manner, ensuring a consistent output regardless of formatting
+     * differences. It handles all JSON value types, including objects, arrays,
+     * numbers, strings, and literals (true, false, null).
+     * </p>
+     *
+     * @param value the JSON value to be canonicalized
+     * @return a string containing the canonicalized JSON representation of the
+     *         input value
+     */
     public static final String canonize(final JsonValue value) {
 
         final StringWriter writer = new StringWriter();
@@ -68,6 +82,24 @@ public final class JsonCanonicalizer {
         return writer.toString();
     }
 
+    /**
+     * Canonicalizes a JSON according to the RFC 8785 JSON Canonicalization Scheme
+     * (JCS).
+     * <p>
+     * This method serializes the given {@link JsonValue} in a deterministic and
+     * standardized manner, ensuring a consistent output regardless of formatting
+     * differences. The canonicalized JSON is written to the provided
+     * {@link Writer}.
+     * </p>
+     * <p>
+     * This method handles different JSON value types, including objects, arrays,
+     * numbers, strings, and literals (true, false, null).
+     * </p>
+     *
+     * @param value  the JSON value to be canonicalized
+     * @param writer the writer to which the canonicalized JSON output is written
+     * @throws IOException if an I/O error occurs while writing to the writer
+     */
     public static final void canonize(final JsonValue value, final Writer writer) throws IOException {
 
         final ValueType valueType = value != null ? value.getValueType() : null;
@@ -99,9 +131,22 @@ public final class JsonCanonicalizer {
         }
     }
 
+    /**
+     * Canonicalizes a JSON number according to the RFC 8785 JSON Canonicalization
+     * Scheme (JCS).
+     * <p>
+     * This method serializes the given {@link JsonNumber} in a deterministic and
+     * standardized manner, ensuring a consistent numeric representation. The
+     * canonicalized number is written to the provided {@link Writer}.
+     * </p>
+     *
+     * @param number the JSON number to be canonicalized
+     * @param writer the writer to which the canonicalized JSON output is written
+     * @throws IOException if an I/O error occurs while writing to the writer
+     */
     public static final void canonizeNumber(final JsonNumber number, final Writer writer) throws IOException {
 
-        String numberString;
+        final String numberString;
 
         if (number.bigDecimalValue().compareTo(BigDecimal.ZERO) == 0) {
 
@@ -123,6 +168,19 @@ public final class JsonCanonicalizer {
         writer.write(numberString);
     }
 
+    /**
+     * Canonicalizes a JSON array according to the RFC 8785 JSON Canonicalization
+     * Scheme (JCS).
+     * <p>
+     * This method serializes the given {@link JsonArray} in a deterministic and
+     * standardized manner, ensuring a consistent output. The canonicalized JSON
+     * array is written to the provided {@link Writer}.
+     * </p>
+     *
+     * @param value  the JSON array to be canonicalized
+     * @param writer the writer to which the canonicalized JSON output is written
+     * @throws IOException if an I/O error occurs while writing to the writer
+     */
     public static final void canonizeArray(final JsonArray value, final Writer writer) throws IOException {
         boolean next = false;
 
@@ -142,6 +200,19 @@ public final class JsonCanonicalizer {
         writer.write("]");
     }
 
+    /**
+     * Canonicalizes a JSON object according to the RFC 8785 JSON Canonicalization
+     * Scheme (JCS).
+     * <p>
+     * This method serializes the given {@link JsonObject} in a deterministic and
+     * standardized manner, ensuring a consistent output. The canonicalized JSON is
+     * written to the provided {@link Writer}.
+     * </p>
+     *
+     * @param value  the JSON object to be canonicalized
+     * @param writer the writer to which the canonicalized JSON output is written
+     * @throws IOException if an I/O error occurs while writing to the writer
+     */
     private static final void canonizeObject(final JsonObject value, final Writer writer) throws IOException {
         boolean next = false;
 
@@ -175,6 +246,17 @@ public final class JsonCanonicalizer {
         writer.write("}");
     }
 
+    /**
+     * Escapes special characters in a JSON property name according to JSON
+     * canonicalization rules.
+     * <p>
+     * This method ensures that control characters and other necessary characters
+     * are properly escaped to maintain a valid and consistent JSON representation.
+     * </p>
+     *
+     * @param value the JSON property name to escape
+     * @return the escaped property name
+     */
     public static final String escape(String value) {
 
         final StringBuilder escaped = new StringBuilder();
