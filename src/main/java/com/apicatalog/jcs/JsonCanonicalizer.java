@@ -74,6 +74,7 @@ public final class JsonCanonicalizer {
 
         if (valueType == null || ValueType.NULL == valueType) {
             writer.write("null");
+            return;
         }
 
         switch (valueType) {
@@ -127,7 +128,7 @@ public final class JsonCanonicalizer {
 
         writer.write("[");
 
-        for (JsonValue item : value.asJsonArray()) {
+        for (final JsonValue item : value.asJsonArray()) {
 
             if (next) {
                 writer.write(",");
@@ -139,7 +140,6 @@ public final class JsonCanonicalizer {
         }
 
         writer.write("]");
-
     }
 
     private static final void canonizeObject(final JsonObject value, final Writer writer) throws IOException {
@@ -151,6 +151,7 @@ public final class JsonCanonicalizer {
 
         if (properties != null && !properties.isEmpty()) {
             final ArrayList<String> sortedProperties = new ArrayList<>(properties);
+
             Collections.sort(sortedProperties);
 
             for (final String propertyName : sortedProperties) {
