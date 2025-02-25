@@ -15,7 +15,7 @@ Formerly part of [Titanium JSON-LD](https://github.com/filip26/titanium-json-ld)
 
 ```javascript
 
-// The canonical version is written to a provided `Writer`.
+// The canonical version is written to a provided Writer.
 JsonCanonicalizer.canonize(JsonValue, Writer);
 ```
 
@@ -29,6 +29,24 @@ JsonCanonicalizer.canonize(JsonValue, Writer);
     <artifactId>titanium-jcs</artifactId>
     <version>1.0.0</version>
 </dependency>
+```
+
+Ensure that the JSON-P provider is added to the classpath if it is not already present.
+
+```xml
+
+<dependency>
+    <groupId>org.glassfish</groupId>
+    <artifactId>jakarta.json</artifactId>
+    <version>2.0.1</version>
+</dependency>
+```
+
+### Gradle
+
+```gradle
+implementation("com.apicatalog:titanium-jcs:1.0.0")
+implementation("org.glassfish:jakarta.json:2.0.1")
 ```
 
 ## Contributing
