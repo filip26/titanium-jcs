@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.apicatalog</groupId>
     <artifactId>titanium-jcs</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <url>https://github.com/filip26/titanium-jcs</url>
     <scm>
@@ -24,7 +24,6 @@
         
         <jakarta.json.version>2.0.1</jakarta.json.version>
 
-        
         <!--  test resources -->
         <junit.version>5.13.4</junit.version>
     </properties>
@@ -32,7 +31,7 @@
     <name>Titanium JCS</name>
 
     <description>
-        An implementation of the RFC 8785 JSON Canonicalization Scheme (JCS) specification in Java, utilizing Jakarta JSON Processing.
+        An implementation of the RFC 8785 JSON Canonicalization Scheme (JCS) specification, utilizing Jakarta JSON Processing.
     </description>
 
     <licenses>
@@ -167,36 +166,26 @@
                         <version>3.2.8</version>
                         <executions>
                             <execution>
-                              <id>sign-artifacts</id>
-                              <phase>verify</phase>
-                              <goals>
-                                  <goal>sign</goal>
-                              </goals>
-                              <configuration>
-                                <signer>bc</signer>
-                              </configuration>                                
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
                             </execution>
                         </executions>
                     </plugin>
                     <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.7.0</version>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.8.0</version>
                         <extensions>true</extensions>
                         <configuration>
-                            <serverId>ossrh</serverId>
-                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
                         </configuration>
                     </plugin>
                 </plugins>
             </build>
-            <distributionManagement>
-                <snapshotRepository>
-                    <id>ossrh</id>
-                    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-                </snapshotRepository>
-            </distributionManagement>
         </profile>
     </profiles>
 </project>
