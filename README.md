@@ -74,7 +74,7 @@ addressing, and integrating multiformats into development workflows.
 Canonicalize JSON and write canonical JSON to stdout
 
 ```bash
-cat test.json | ld-cli jcs --pretty 
+cat test.json | ld-cli jcs
 ```
 
 ## Contributing
