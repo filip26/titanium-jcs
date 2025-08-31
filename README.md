@@ -61,13 +61,6 @@ Ensure that the JSON-P provider is added to the classpath if it is not already p
 </dependency>
 ```
 
-### Gradle
-
-```gradle
-implementation("com.apicatalog:titanium-jcs:1.0.0")
-implementation("org.glassfish:jakarta.json:2.0.1")
-```
-
 ## 🛠️ LD-CLI
 [LD-CLI](https://github.com/filip26/ld-cli) is a command-line utility for
 working with JSON, JSON-LD, CBOR-LD, multiformats, and related specifications.
@@ -78,7 +71,7 @@ addressing, and integrating multiformats into development workflows.
 
 ### Example
 
-Canonicalize JSON and write canonical JSON to stdoout
+Canonicalize JSON and write canonical JSON to stdout
 
 ```bash
 cat test.json | ld-cli jcs --pretty 
@@ -104,6 +97,7 @@ Fork and clone the project repository.
 - [RFC 8785 JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785)
 - [JSON Canonicalization Scheme (JCS)](https://github.com/cyberphone/json-canonicalization)
 - [Titanium RDF Canon](https://github.com/filip26/titanium-rdf-canon)
+- [LD-CLI](https://github.com/filip26/ld-cli)
 
 ## Commercial Support
 
