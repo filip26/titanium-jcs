@@ -29,12 +29,15 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 ## Example
 
 ```javascript
+// Canonicalize a JSON value and return the canonical string
+var canonicalJson = Jcs.canonize(json);
+
 // Canonicalize a JSON value and write canonical JSON to a writer
-Jcs.canonize(jsonValue, writer);
+Jcs.canonize(json, writer);
 
 // Compare two JSON values for canonical equality
 if (Jcs.equals(json1, json2)) {
-
+  // values are equal under RFC 8785 rules
 }
 ```
 
