@@ -31,7 +31,7 @@
     <name>Titanium JCS</name>
 
     <description>
-        An implementation of the RFC 8785 JSON Canonicalization Scheme (JCS) specification, utilizing Jakarta JSON Processing.
+        Deterministic JSON serialization and canonical equality - RFC 8785 JCS.
     </description>
 
     <licenses>
