@@ -49,7 +49,7 @@ if (Jcs.equals(json1, json2)) {
 <dependency>
     <groupId>com.apicatalog</groupId>
     <artifactId>titanium-jcs</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 </dependency>
 ```
 

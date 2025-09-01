@@ -22,8 +22,8 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -405,22 +405,21 @@ public final class Jcs {
             return true;
         }
 
-        Collection<String> keys1 = object1.keySet().stream()
-                .map(Jcs::escape)
+        final List<String> keys1 = object1.keySet().stream()
                 .sorted()
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
 
-        Collection<String> keys2 = object2.keySet().stream()
-                .map(Jcs::escape)
+        final List<String> keys2 = object2.keySet().stream()
                 .sorted()
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
 
-        if (!keys1.equals(keys2)) {
-            return false;
-        }
+        for (int index = 0; index < keys1.size(); index++) {
 
-        for (final String key : keys1) {
-            if (!equals(object1.get(key), object2.get(key))) {
+            final String k1 = keys1.get(index);
+            final String k2 = keys2.get(index);
+
+            if (!Jcs.escape(k1).equals(Jcs.escape(k2))
+                    || !equals(object1.get(k1), object2.get(k2))) {
                 return false;
             }
         }
