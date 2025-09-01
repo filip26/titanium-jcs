@@ -418,10 +418,8 @@ public final class Jcs {
             final String k1 = keys1.get(index);
             final String k2 = keys2.get(index);
 
-            if (!Jcs.escape(k1).equals(Jcs.escape(k2))) {
-                return false;
-            }
-            if (!equals(object1.get(k1), object2.get(k2))) {
+            if (!Jcs.escape(k1).equals(Jcs.escape(k2))
+                    || !equals(object1.get(k1), object2.get(k2))) {
                 return false;
             }
         }
