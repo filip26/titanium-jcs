@@ -5,13 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.apicatalog</groupId>
     <artifactId>titanium-jcs</artifactId>
-    <version>1.1.1</version>
+    <version>2.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <url>https://github.com/filip26/titanium-jcs</url>
     <scm>
         <connection>scm:git:git://github.com/filip26/titanium-jcs.git</connection>
-        <developerConnection>
-            scm:git:git://github.com/filip26/titanium-jcs.git</developerConnection>
+        <developerConnection>scm:git:git://github.com/filip26/titanium-jcs.git</developerConnection>
         <url>https://github.com/filip26/titanium-jcs/tree/main</url>
     </scm>
     <properties>
@@ -23,6 +22,8 @@
         <argLine>-Dfile.encoding=UTF-8</argLine>
         
         <jakarta.json.version>2.0.1</jakarta.json.version>
+        <tree-io.version>0.7.6-SNAPSHOT</tree-io.version>
+        
 
         <!--  test resources -->
         <junit.version>5.13.4</junit.version>
@@ -61,11 +62,16 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.apicatalog</groupId>
+            <artifactId>tree-io-api</artifactId>
+            <version>${tree-io.version}</version>
+        </dependency>    
+        <dependency>
             <groupId>jakarta.json</groupId>
             <artifactId>jakarta.json-api</artifactId>
             <version>${jakarta.json.version}</version>
             <scope>provided</scope>
-        </dependency>    
+        </dependency>
         <!--  Tests -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -79,6 +85,12 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.apicatalog</groupId>
+            <artifactId>tree-io-jakarta</artifactId>
+            <version>${tree-io.version}</version>
+            <scope>test</scope>
+        </dependency>        
         <dependency>
             <groupId>org.glassfish</groupId>
             <artifactId>jakarta.json</artifactId>

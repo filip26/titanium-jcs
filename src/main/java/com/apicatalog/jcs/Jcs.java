@@ -23,16 +23,17 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import jakarta.json.JsonArray;
+import com.apicatalog.tree.io.NodeAdapter;
+import com.apicatalog.tree.io.NodeModel;
+import com.apicatalog.tree.io.NodeType;
+
 import jakarta.json.JsonNumber;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
-import jakarta.json.JsonValue.ValueType;
 
 /**
  * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">
@@ -97,7 +98,7 @@ public final class Jcs {
      * @return a string containing the canonicalized JSON representation of the
      *         input value
      */
-    public static final String canonize(final JsonValue value) {
+    public static final String canonize(final NodeModel value) {
 
         final StringWriter writer = new StringWriter();
 
@@ -124,41 +125,53 @@ public final class Jcs {
      * numbers, strings, and literals (true, false, null).
      * </p>
      *
-     * @param value  the JSON value to be canonicalized
+     * @param node  the JSON value to be canonicalized
      * @param writer the writer to which the canonicalized JSON output is written
      * @throws IOException if an I/O error occurs while writing to the writer
      */
-    public static final void canonize(final JsonValue value, final Writer writer) throws IOException {
+    public static final void canonize(final NodeModel node, final Writer writer) throws IOException {
+        canonize(node.node(), node.adapter(), writer);
+    }
 
-        final ValueType valueType = value != null ? value.getValueType() : null;
+    public static final void canonize(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
+        final NodeType nodeType = value != null ? adapter.type(value) : null;
 
-        if (valueType == null || ValueType.NULL == valueType) {
+        if (nodeType == null || NodeType.NULL == nodeType) {
             writer.write("null");
             return;
         }
 
-        switch (valueType) {
-        case ARRAY:
-            canonizeArray(value.asJsonArray(), writer);
+        switch (nodeType) {
+        case COLLECTION:
+            canonizeArray(value, adapter, writer);
             break;
 
-        case OBJECT:
-            canonizeObject(value.asJsonObject(), writer);
+        case MAP:
+            canonizeObject(value, adapter, writer);
             break;
 
         case NUMBER:
-            writer.write(canonizeNumber((JsonNumber) value));
+            writer.write(canonizeNumber(adapter.asDecimal(value)));
+            break;
+
+        case STRING:
+            writer.write('"');
+            writer.write(escape(adapter.asString(value)));
+            writer.write('"');
             break;
 
         case FALSE:
         case TRUE:
-        case STRING:
         case NULL:
-            writer.write(value.toString());
+            writer.write(adapter.asString(value));
             break;
-        }
+            
+        default:
+            throw new IllegalArgumentException("Node type " + nodeType + " is not supported.");
+        }       
     }
 
+    
     /**
      * Canonicalizes a JSON number according to the RFC 8785 JSON Canonicalization
      * Scheme (JCS).
@@ -170,47 +183,35 @@ public final class Jcs {
      * @param number the JSON number to be canonicalized
      * @return the canonicalized representation
      */
-    public static final String canonizeNumber(final JsonNumber number) {
-        if (number.bigDecimalValue().compareTo(BigDecimal.ZERO) == 0) {
+    static final String canonizeNumber(final BigDecimal number) {
+        if (number.compareTo(BigDecimal.ZERO) == 0) {
             return "0";
         }
 
-        if (number.bigDecimalValue().compareTo(BigDecimal.ONE.movePointRight(21)) >= 0) {
-            return eFormatBigDecimal.format(number.bigDecimalValue()).replace("E", "e+");
+        if (number.compareTo(BigDecimal.ONE.movePointRight(21)) >= 0) {
+            return eFormatBigDecimal.format(number).replace("E", "e+");
         }
 
-        if (number.bigDecimalValue().compareTo(BigDecimal.ONE.movePointLeft(21)) <= 0) {
-            return eFormatBigDecimal.format(number.bigDecimalValue()).toLowerCase();
+        if (number.compareTo(BigDecimal.ONE.movePointLeft(21)) <= 0) {
+            return eFormatBigDecimal.format(number).toLowerCase();
         }
 
-        return eFormat.format(number.bigDecimalValue());
+        return eFormat.format(number);
     }
 
-    /**
-     * Canonicalizes a JSON array according to the RFC 8785 JSON Canonicalization
-     * Scheme (JCS).
-     * <p>
-     * This method serializes the given {@link JsonArray} in a deterministic and
-     * standardized manner, ensuring a consistent output. The canonicalized JSON
-     * array is written to the provided {@link Writer}.
-     * </p>
-     *
-     * @param value  the JSON array to be canonicalized
-     * @param writer the writer to which the canonicalized JSON output is written
-     * @throws IOException if an I/O error occurs while writing to the writer
-     */
-    public static final void canonizeArray(final JsonArray value, final Writer writer) throws IOException {
+
+    static final void canonizeArray(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
         boolean next = false;
 
         writer.write("[");
 
-        for (final JsonValue item : value.asJsonArray()) {
+        for (final Object item : adapter.asIterable(value)) {
 
             if (next) {
                 writer.write(",");
             }
 
-            canonize(item, writer);
+            canonize(item, adapter, writer);
 
             next = true;
         }
@@ -231,12 +232,14 @@ public final class Jcs {
      * @param writer the writer to which the canonicalized JSON output is written
      * @throws IOException if an I/O error occurs while writing to the writer
      */
-    public static final void canonizeObject(final JsonObject value, final Writer writer) throws IOException {
+    static final void canonizeObject(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
         boolean next = false;
 
         writer.write("{");
 
-        final Set<String> properties = value.keySet();
+        final Set<String> properties = adapter.keys(value).stream()
+                .map(adapter::stringValue)
+                .collect(Collectors.toSet());
 
         if (properties != null && !properties.isEmpty()) {
             final ArrayList<String> sortedProperties = new ArrayList<>(properties);
@@ -253,9 +256,9 @@ public final class Jcs {
                 writer.write(escape(propertyName));
                 writer.write("\":");
 
-                JsonValue propertyValue = value.get(propertyName);
+                Object propertyValue = adapter.property(propertyName, value);
 
-                canonize(propertyValue, writer);
+                canonize(propertyValue, adapter, writer);
 
                 next = true;
             }
@@ -275,7 +278,7 @@ public final class Jcs {
      * @param value the JSON property name to escape
      * @return the escaped property name
      */
-    public static final String escape(String value) {
+    static final String escape(String value) {
 
         final StringBuilder escaped = new StringBuilder();
 
@@ -325,23 +328,26 @@ public final class Jcs {
      *
      * @param value1 the first JSON value (may be {@code null})
      * @param value2 the second JSON value (may be {@code null})
+     * @param adapter 
      * @return {@code true} if the two values are canonically equal; {@code false}
      *         otherwise
      */
-    public static final boolean equals(final JsonValue value1, final JsonValue value2) {
-
+    public static final boolean equals(final Object value1, final Object value2, final NodeAdapter adapter) {
+        
         if (value1 == null) {
-            return value2 == null || value2.getValueType() == ValueType.NULL;
+            return value2 == null || adapter.isNull(value2);
 
         } else if (value2 == null) {
-            return value1.getValueType() == ValueType.NULL;
+            return adapter.isNull(value1);
         }
 
-        if (value1.getValueType() != value2.getValueType()) {
+        NodeType nodeType = adapter.type(value1);
+        
+        if (nodeType != adapter.type(value2)) {
             return false;
         }
 
-        switch (value1.getValueType()) {
+        switch (nodeType) {
         case NULL:
         case TRUE:
         case FALSE:
@@ -351,17 +357,17 @@ public final class Jcs {
             return value1.equals(value2);
 
         case NUMBER:
-            return numberEquals((JsonNumber) value1, (JsonNumber) value2);
+            return numberEquals(adapter.asDecimal(value1), adapter.asDecimal(value2));
 
-        case ARRAY:
-            return arrayEquals(value1.asJsonArray(), value2.asJsonArray());
+        case COLLECTION:
+            return arrayEquals(value1, value2, adapter);
 
-        case OBJECT:
-            return objectEquals(value1.asJsonObject(), value2.asJsonObject());
+        case MAP:
+            return objectEquals(value1, value2, adapter);
 
         default:
             return false;
-        }
+        }        
     }
 
     /**
@@ -372,12 +378,12 @@ public final class Jcs {
      * {@link #canonizeNumber(JsonNumber)} and comparing the resulting strings.
      * </p>
      *
-     * @param number1 the first JSON number
-     * @param number2 the second JSON number
+     * @param number1 the first number
+     * @param number2 the second number
      * @return {@code true} if both numbers have the same canonical representation;
      *         {@code false} otherwise
      */
-    public static final boolean numberEquals(final JsonNumber number1, final JsonNumber number2) {
+    static final boolean numberEquals(final BigDecimal number1, final BigDecimal number2) {
         return canonizeNumber(number1).equals(canonizeNumber(number2));
     }
 
@@ -395,34 +401,36 @@ public final class Jcs {
      * @return {@code true} if the two objects are canonically equal; {@code false}
      *         otherwise
      */
-    public static final boolean objectEquals(final JsonObject object1, final JsonObject object2) {
+    static final boolean objectEquals(final Object object1, final Object object2, final NodeAdapter adapter) {
 
-        if (object1.size() != object2.size()) {
+        int size = adapter.size(object1); 
+        
+        if (size != adapter.size(object2)) {
             return false;
         }
 
-        if (object1.isEmpty()) {
+        if (size == 0) {
             return true;
         }
-
-        final List<String> keys1 = object1.keySet().stream()
-                .sorted()
-                .collect(Collectors.toList());
-
-        final List<String> keys2 = object2.keySet().stream()
-                .sorted()
-                .collect(Collectors.toList());
-
-        for (int index = 0; index < keys1.size(); index++) {
-
-            final String k1 = keys1.get(index);
-            final String k2 = keys2.get(index);
-
-            if (!Jcs.escape(k1).equals(Jcs.escape(k2))
-                    || !equals(object1.get(k1), object2.get(k2))) {
-                return false;
-            }
-        }
+//FIXME
+//        final List<String> keys1 = object1.keySet().stream()
+//                .sorted()
+//                .collect(Collectors.toList());
+//
+//        final List<String> keys2 = object2.keySet().stream()
+//                .sorted()
+//                .collect(Collectors.toList());
+//
+//        for (int index = 0; index < keys1.size(); index++) {
+//
+//            final String k1 = keys1.get(index);
+//            final String k2 = keys2.get(index);
+//
+//            if (!Jcs.escape(k1).equals(Jcs.escape(k2))
+//                    || !equals(object1.get(k1), object2.get(k2))) {
+//                return false;
+//            }
+//        }
         return true;
     }
 
@@ -440,21 +448,21 @@ public final class Jcs {
      * @return {@code true} if the two arrays are canonically equal; {@code false}
      *         otherwise
      */
-    public static final boolean arrayEquals(final JsonArray array1, final JsonArray array2) {
-
-        if (array1.size() != array2.size()) {
-            return false;
-        }
-
-        if (array1.isEmpty()) {
-            return true;
-        }
-
-        for (int index = 0; index < array1.size(); index++) {
-            if (!equals(array1.get(index), array2.get(index))) {
-                return false;
-            }
-        }
+    static final boolean arrayEquals(final Object value1, final Object value2, final NodeAdapter adapter) {
+//FIXME
+//        if (array1.size() != array2.size()) {
+//            return false;
+//        }
+//
+//        if (array1.isEmpty()) {
+//            return true;
+//        }
+//
+//        for (int index = 0; index < array1.size(); index++) {
+//            if (!equals(array1.get(index), array2.get(index))) {
+//                return false;
+//            }
+//        }
         return true;
     }
 }

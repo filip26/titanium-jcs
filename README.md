@@ -49,7 +49,7 @@ if (Jcs.equals(json1, json2)) {
 <dependency>
     <groupId>com.apicatalog</groupId>
     <artifactId>titanium-jcs</artifactId>
-    <version>1.1.1</version>
+    <version>${titanium-jcs.version}</version>
 </dependency>
 ```
 
@@ -80,14 +80,14 @@ Canonicalize JSON and write canonical JSON to stdout
 cat test.json | ld-cli jcs
 ```
 
-## Contributing
+## 🤝 Contributing
 
-All PR's welcome!
+Contributions are welcome! Please submit a pull request.
 
 
 ### Building
 
-Fork and clone the project repository.
+Fork and clone the repository, then build with Maven:
 
 ```bash
 > cd titanium-jcs
@@ -102,7 +102,7 @@ Fork and clone the project repository.
 - [Titanium RDF Canon](https://github.com/filip26/titanium-rdf-canon)
 - [LD-CLI](https://github.com/filip26/ld-cli)
 
-## Commercial Support
+## 💼 Commercial Support
 
 Commercial support and consulting are available.  
 For inquiries, please contact: filip26@gmail.com
