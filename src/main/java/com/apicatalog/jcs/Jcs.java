@@ -23,12 +23,12 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.apicatalog.tree.io.NodeAdapter;
-import com.apicatalog.tree.io.NodeModel;
 import com.apicatalog.tree.io.NodeType;
 
 import jakarta.json.JsonNumber;
@@ -52,9 +52,8 @@ import jakarta.json.JsonValue;
  * </ul>
  *
  * <p>
- * This implementation uses
- * <a href="https://github.com/eclipse-ee4j/jsonp">Jakarta JSON Processing
- * (JSON-P)</a> as input and can output canonicalized JSON to a
+ * This implementation uses <a href="https://github.com/filip26/tree-io">Tree
+ * I/O Processing</a> as input and can output canonicalized JSON to a
  * {@link java.io.Writer} or return it as a {@link java.lang.String}.
  * </p>
  *
@@ -64,7 +63,9 @@ import jakarta.json.JsonValue;
  *
  * <pre>{@code
  * // Canonicalize a JSON value and write to a writer
- * Jcs.canonize(jsonValue, writer);
+ * Jcs.canonize(nodeValue, writer);
+ * // or
+ * Jcs.canonize(jsonValue, adapter, writer);
  *
  * // Compare two JSON values for canonical equality
  * boolean equal = Jcs.equals(json1, json2);
@@ -94,16 +95,17 @@ public final class Jcs {
      * numbers, strings, and literals (true, false, null).
      * </p>
      *
-     * @param value the JSON value to be canonicalized
+     * @param value   the JSON value to be canonicalized
+     * @param adapter
      * @return a string containing the canonicalized JSON representation of the
      *         input value
      */
-    public static final String canonize(final NodeModel value) {
+    public static final String canonize(final Object value, final NodeAdapter adapter) {
 
         final StringWriter writer = new StringWriter();
 
         try {
-            canonize(value, writer);
+            canonize(value, adapter, writer);
         } catch (IOException e) {
             // ignore
         }
@@ -125,14 +127,11 @@ public final class Jcs {
      * numbers, strings, and literals (true, false, null).
      * </p>
      *
-     * @param node  the JSON value to be canonicalized
-     * @param writer the writer to which the canonicalized JSON output is written
+     * @param node    the JSON value to be canonicalized
+     * @param adapter
+     * @param writer  the writer to which the canonicalized JSON output is written
      * @throws IOException if an I/O error occurs while writing to the writer
      */
-    public static final void canonize(final NodeModel node, final Writer writer) throws IOException {
-        canonize(node.node(), node.adapter(), writer);
-    }
-
     public static final void canonize(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
         final NodeType nodeType = value != null ? adapter.type(value) : null;
 
@@ -165,13 +164,12 @@ public final class Jcs {
         case NULL:
             writer.write(adapter.asString(value));
             break;
-            
+
         default:
             throw new IllegalArgumentException("Node type " + nodeType + " is not supported.");
-        }       
+        }
     }
 
-    
     /**
      * Canonicalizes a JSON number according to the RFC 8785 JSON Canonicalization
      * Scheme (JCS).
@@ -198,7 +196,6 @@ public final class Jcs {
 
         return eFormat.format(number);
     }
-
 
     static final void canonizeArray(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
         boolean next = false;
@@ -326,14 +323,14 @@ public final class Jcs {
      * formatting and lexicographic member ordering for objects.
      * </p>
      *
-     * @param value1 the first JSON value (may be {@code null})
-     * @param value2 the second JSON value (may be {@code null})
-     * @param adapter 
+     * @param value1  the first JSON value (may be {@code null})
+     * @param value2  the second JSON value (may be {@code null})
+     * @param adapter
      * @return {@code true} if the two values are canonically equal; {@code false}
      *         otherwise
      */
     public static final boolean equals(final Object value1, final Object value2, final NodeAdapter adapter) {
-        
+
         if (value1 == null) {
             return value2 == null || adapter.isNull(value2);
 
@@ -342,7 +339,7 @@ public final class Jcs {
         }
 
         NodeType nodeType = adapter.type(value1);
-        
+
         if (nodeType != adapter.type(value2)) {
             return false;
         }
@@ -367,7 +364,7 @@ public final class Jcs {
 
         default:
             return false;
-        }        
+        }
     }
 
     /**
@@ -403,8 +400,8 @@ public final class Jcs {
      */
     static final boolean objectEquals(final Object object1, final Object object2, final NodeAdapter adapter) {
 
-        int size = adapter.size(object1); 
-        
+        int size = adapter.size(object1);
+
         if (size != adapter.size(object2)) {
             return false;
         }
@@ -448,21 +445,26 @@ public final class Jcs {
      * @return {@code true} if the two arrays are canonically equal; {@code false}
      *         otherwise
      */
-    static final boolean arrayEquals(final Object value1, final Object value2, final NodeAdapter adapter) {
-//FIXME
-//        if (array1.size() != array2.size()) {
-//            return false;
-//        }
-//
-//        if (array1.isEmpty()) {
-//            return true;
-//        }
-//
-//        for (int index = 0; index < array1.size(); index++) {
-//            if (!equals(array1.get(index), array2.get(index))) {
-//                return false;
-//            }
-//        }
+    static final boolean arrayEquals(final Object array1, final Object array2, final NodeAdapter adapter) {
+
+        final int size = adapter.size(array1);
+
+        if (size != adapter.size(array2)) {
+            return false;
+        }
+
+        if (size == 0) {
+            return true;
+        }
+
+        final Iterator<?> it1 = adapter.iterable(array1).iterator();
+        final Iterator<?> it2 = adapter.iterable(array2).iterator();
+
+        while (it1.hasNext()) {
+            if (!equals(it1.next(), it2.next(), adapter)) {
+                return false;
+            }
+        }
         return true;
     }
 }
