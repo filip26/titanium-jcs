@@ -131,7 +131,7 @@ public final class Jcs {
      * @throws IOException if an I/O error occurs while writing to the writer
      */
     public static final void canonize(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
-        final NodeType nodeType = value != null ? adapter.type(value) : null;
+        final NodeType nodeType = value != null ? adapter.typeOf(value) : null;
 
         if (nodeType == null || NodeType.NULL == nodeType) {
             writer.write("null");
@@ -153,14 +153,16 @@ public final class Jcs {
 
         case STRING:
             writer.write('"');
-            writer.write(escape(adapter.asString(value)));
+            writer.write(escape(adapter.stringValue(value)));
             writer.write('"');
             break;
 
         case FALSE:
+            writer.write("false");
+            break;
+
         case TRUE:
-        case NULL:
-            writer.write(adapter.asString(value));
+            writer.write("true");
             break;
 
         default:
@@ -196,19 +198,17 @@ public final class Jcs {
     }
 
     static final void canonizeArray(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
-        boolean next = false;
-
         writer.write('[');
 
-        for (final Object item : adapter.asIterable(value)) {
+        final Iterator<?> it = adapter.asIterable(value).iterator();
 
-            if (next) {
+        while (it.hasNext()) {
+
+            canonize(it.next(), adapter, writer);
+
+            if (it.hasNext()) {
                 writer.write(',');
             }
-
-            canonize(item, adapter, writer);
-
-            next = true;
         }
 
         writer.write(']');
@@ -230,7 +230,7 @@ public final class Jcs {
     static final void canonizeObject(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
         writer.write('{');
 
-        final Iterator<Entry<?, ?>> sorted = adapter.streamEntries(value)
+        final Iterator<Entry<?, ?>> sorted = adapter.propertyStream(value)
                 .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
@@ -326,9 +326,9 @@ public final class Jcs {
             return adapter.isNull(value1);
         }
 
-        NodeType nodeType = adapter.type(value1);
+        NodeType nodeType = adapter.typeOf(value1);
 
-        if (nodeType != adapter.type(value2)) {
+        if (nodeType != adapter.typeOf(value2)) {
             return false;
         }
 
@@ -339,7 +339,7 @@ public final class Jcs {
             return true;
 
         case STRING:
-            return value1.equals(value2);
+            return adapter.stringValue(value1).equals(adapter.stringValue(value2));
 
         case NUMBER:
             return numberEquals(adapter.asDecimal(value1), adapter.asDecimal(value2));
@@ -398,11 +398,11 @@ public final class Jcs {
             return true;
         }
 
-        final Iterator<Entry<?, ?>> entries1 = adapter.streamEntries(object1)
+        final Iterator<Entry<?, ?>> entries1 = adapter.propertyStream(object1)
                 .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
-        final Iterator<Entry<?, ?>> entries2 = adapter.streamEntries(object2)
+        final Iterator<Entry<?, ?>> entries2 = adapter.propertyStream(object2)
                 .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
@@ -447,8 +447,8 @@ public final class Jcs {
             return true;
         }
 
-        final Iterator<?> it1 = adapter.items(array1).iterator();
-        final Iterator<?> it2 = adapter.items(array2).iterator();
+        final Iterator<?> it1 = adapter.elements(array1).iterator();
+        final Iterator<?> it2 = adapter.elements(array2).iterator();
 
         while (it1.hasNext() && it2.hasNext()) {
             if (!equals(it1.next(), it2.next(), adapter)) {
