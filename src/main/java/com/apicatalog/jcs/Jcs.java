@@ -21,14 +21,12 @@ import java.io.Writer;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Locale;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Map.Entry;
 
 import com.apicatalog.tree.io.NodeAdapter;
+import com.apicatalog.tree.io.NodeModel;
 import com.apicatalog.tree.io.NodeType;
 
 import jakarta.json.JsonNumber;
@@ -200,12 +198,12 @@ public final class Jcs {
     static final void canonizeArray(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
         boolean next = false;
 
-        writer.write("[");
+        writer.write('[');
 
         for (final Object item : adapter.asIterable(value)) {
 
             if (next) {
-                writer.write(",");
+                writer.write(',');
             }
 
             canonize(item, adapter, writer);
@@ -213,7 +211,7 @@ public final class Jcs {
             next = true;
         }
 
-        writer.write("]");
+        writer.write(']');
     }
 
     /**
@@ -230,38 +228,28 @@ public final class Jcs {
      * @throws IOException if an I/O error occurs while writing to the writer
      */
     static final void canonizeObject(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
-        boolean next = false;
+        writer.write('{');
 
-        writer.write("{");
+        final Iterator<Entry<?, ?>> sorted = adapter.streamEntries(value)
+                .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
+                .iterator();
 
-        final Set<String> properties = adapter.keys(value).stream()
-                .map(adapter::stringValue)
-                .collect(Collectors.toSet());
+        while (sorted.hasNext()) {
 
-        if (properties != null && !properties.isEmpty()) {
-            final ArrayList<String> sortedProperties = new ArrayList<>(properties);
+            final Entry<?, ?> entry = sorted.next();
 
-            Collections.sort(sortedProperties);
+            writer.write('"');
+            writer.write(escape(adapter.asString(entry.getKey())));
+            writer.write("\":");
 
-            for (final String propertyName : sortedProperties) {
+            canonize(entry.getValue(), adapter, writer);
 
-                if (next) {
-                    writer.write(",");
-                }
-
-                writer.write("\"");
-                writer.write(escape(propertyName));
-                writer.write("\":");
-
-                Object propertyValue = adapter.property(propertyName, value);
-
-                canonize(propertyValue, adapter, writer);
-
-                next = true;
+            if (sorted.hasNext()) {
+                writer.write(',');
             }
         }
 
-        writer.write("}");
+        writer.write('}');
     }
 
     /**
@@ -409,26 +397,27 @@ public final class Jcs {
         if (size == 0) {
             return true;
         }
-//FIXME
-//        final List<String> keys1 = object1.keySet().stream()
-//                .sorted()
-//                .collect(Collectors.toList());
-//
-//        final List<String> keys2 = object2.keySet().stream()
-//                .sorted()
-//                .collect(Collectors.toList());
-//
-//        for (int index = 0; index < keys1.size(); index++) {
-//
-//            final String k1 = keys1.get(index);
-//            final String k2 = keys2.get(index);
-//
-//            if (!Jcs.escape(k1).equals(Jcs.escape(k2))
-//                    || !equals(object1.get(k1), object2.get(k2))) {
-//                return false;
-//            }
-//        }
-        return true;
+
+        final Iterator<Entry<?, ?>> entries1 = adapter.streamEntries(object1)
+                .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
+                .iterator();
+
+        final Iterator<Entry<?, ?>> entries2 = adapter.streamEntries(object2)
+                .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
+                .iterator();
+
+        while (entries1.hasNext() && entries2.hasNext()) {
+
+            final Entry<?, ?> entry1 = entries1.next();
+            final Entry<?, ?> entry2 = entries2.next();
+
+            if (!Jcs.escape(adapter.asString(entry1.getKey())).equals(Jcs.escape(adapter.asString(entry2.getKey())))
+                    || !equals(entry1.getValue(), entry2.getValue(), adapter)) {
+                return false;
+            }
+        }
+
+        return !entries1.hasNext() && !entries2.hasNext();
     }
 
     /**
@@ -440,8 +429,9 @@ public final class Jcs {
      * {@link #equals(JsonValue, JsonValue)}.
      * </p>
      *
-     * @param array1 the first JSON array
-     * @param array2 the second JSON array
+     * @param array1  the first JSON array
+     * @param array2  the second JSON array
+     * @param adapter
      * @return {@code true} if the two arrays are canonically equal; {@code false}
      *         otherwise
      */
@@ -457,14 +447,14 @@ public final class Jcs {
             return true;
         }
 
-        final Iterator<?> it1 = adapter.iterable(array1).iterator();
-        final Iterator<?> it2 = adapter.iterable(array2).iterator();
+        final Iterator<?> it1 = adapter.items(array1).iterator();
+        final Iterator<?> it2 = adapter.items(array2).iterator();
 
-        while (it1.hasNext()) {
+        while (it1.hasNext() && it2.hasNext()) {
             if (!equals(it1.next(), it2.next(), adapter)) {
                 return false;
             }
         }
-        return true;
+        return !it1.hasNext() && !it2.hasNext();
     }
 }
