@@ -106,7 +106,7 @@ public final class Jcs {
      * @throws IOException if an I/O error occurs
      */
     public static void canonize(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
-        final NodeType nodeType = value != null ? adapter.typeOf(value) : NodeType.NULL;
+        final NodeType nodeType = value != null ? adapter.type(value) : NodeType.NULL;
 
         if (NodeType.NULL.equals(nodeType)) {
             writer.write("null");
@@ -285,8 +285,8 @@ public final class Jcs {
             return adapter.isNull(value1);
         }
 
-        NodeType nodeType1 = adapter.typeOf(value1);
-        NodeType nodeType2 = adapter.typeOf(value2);
+        NodeType nodeType1 = adapter.type(value1);
+        NodeType nodeType2 = adapter.type(value2);
 
         if (nodeType1 != nodeType2) {
             return false;
