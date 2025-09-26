@@ -97,6 +97,12 @@
             <version>${jakarta.json.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.apicatalog</groupId>
+            <artifactId>tree-io-jackson2</artifactId>
+            <version>${tree-io.version}</version>
+            <scope>test</scope>
+        </dependency>        
     </dependencies>
 
     <build>

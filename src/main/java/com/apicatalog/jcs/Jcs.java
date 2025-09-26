@@ -230,7 +230,7 @@ public final class Jcs {
     static final void canonizeObject(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
         writer.write('{');
 
-        final Iterator<Entry<?, ?>> sorted = adapter.propertyStream(value)
+        final Iterator<Entry<?, ?>> sorted = adapter.entryStream(value)
                 .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
@@ -398,11 +398,11 @@ public final class Jcs {
             return true;
         }
 
-        final Iterator<Entry<?, ?>> entries1 = adapter.propertyStream(object1)
+        final Iterator<Entry<?, ?>> entries1 = adapter.entryStream(object1)
                 .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
-        final Iterator<Entry<?, ?>> entries2 = adapter.propertyStream(object2)
+        final Iterator<Entry<?, ?>> entries2 = adapter.entryStream(object2)
                 .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
