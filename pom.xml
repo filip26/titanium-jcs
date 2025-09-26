@@ -24,7 +24,6 @@
         <jakarta.json.version>2.0.1</jakarta.json.version>
         <tree-io.version>0.8.0-SNAPSHOT</tree-io.version>
         
-
         <!--  test resources -->
         <junit.version>5.13.4</junit.version>
     </properties>
@@ -65,12 +64,6 @@
             <groupId>com.apicatalog</groupId>
             <artifactId>tree-io-api</artifactId>
             <version>${tree-io.version}</version>
-        </dependency>    
-        <dependency>
-            <groupId>jakarta.json</groupId>
-            <artifactId>jakarta.json-api</artifactId>
-            <version>${jakarta.json.version}</version>
-            <scope>provided</scope>
         </dependency>
         <!--  Tests -->
         <dependency>

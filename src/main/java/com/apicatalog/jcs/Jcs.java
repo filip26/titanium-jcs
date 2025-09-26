@@ -29,10 +29,6 @@ import com.apicatalog.tree.io.NodeAdapter;
 import com.apicatalog.tree.io.NodeModel;
 import com.apicatalog.tree.io.NodeType;
 
-import jakarta.json.JsonNumber;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonValue;
-
 /**
  * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">
  * RFC 8785 JSON Canonicalization Scheme (JCS)</a> specification in Java.
@@ -66,7 +62,7 @@ import jakarta.json.JsonValue;
  * Jcs.canonize(jsonValue, adapter, writer);
  *
  * // Compare two JSON values for canonical equality
- * boolean equal = Jcs.equals(json1, json2);
+ * boolean equal = Jcs.equals(json1, json2, adapter);
  * }</pre>
  */
 public final class Jcs {
@@ -87,14 +83,16 @@ public final class Jcs {
      * Canonicalizes a JSON value according to the RFC 8785 JSON Canonicalization
      * Scheme (JCS) and returns the canonicalized JSON as a string.
      * <p>
-     * This method serializes the given {@link JsonValue} in a deterministic and
-     * standardized manner, ensuring a consistent output regardless of formatting
-     * differences. It handles all JSON value types, including objects, arrays,
-     * numbers, strings, and literals (true, false, null).
+     * This method serializes the given JSON in a deterministic and standardized
+     * manner, ensuring a consistent output regardless of formatting differences. It
+     * handles all JSON value types, including objects, arrays, numbers, strings,
+     * and literals (true, false, null).
      * </p>
      *
-     * @param value   the JSON value to be canonicalized
-     * @param adapter
+     * @param value   the JSON value to be canonicalized (may be {@code null} to
+     *                represent JSON null)
+     * @param adapter adapter used to inspect and extract node information from the
+     *                provided value
      * @return a string containing the canonicalized JSON representation of the
      *         input value
      */
@@ -115,18 +113,18 @@ public final class Jcs {
      * Canonicalizes a JSON according to the RFC 8785 JSON Canonicalization Scheme
      * (JCS).
      * <p>
-     * This method serializes the given {@link JsonValue} in a deterministic and
-     * standardized manner, ensuring a consistent output regardless of formatting
-     * differences. The canonicalized JSON is written to the provided
-     * {@link Writer}.
+     * This method serializes the given JSON in a deterministic and standardized
+     * manner, ensuring a consistent output regardless of formatting differences.
+     * The canonicalized JSON is written to the provided {@link Writer}.
      * </p>
      * <p>
      * This method handles different JSON value types, including objects, arrays,
      * numbers, strings, and literals (true, false, null).
      * </p>
      *
-     * @param node    the JSON value to be canonicalized
-     * @param adapter
+     * @param value   the JSON value to be canonicalized (may be {@code null} to
+     *                represent JSON null)
+     * @param adapter adapter used to query the node type and read node contents
      * @param writer  the writer to which the canonicalized JSON output is written
      * @throws IOException if an I/O error occurs while writing to the writer
      */
@@ -174,7 +172,7 @@ public final class Jcs {
      * Canonicalizes a JSON number according to the RFC 8785 JSON Canonicalization
      * Scheme (JCS).
      * <p>
-     * This method serializes the given {@link JsonNumber} in a deterministic and
+     * This method serializes the given JSON number in a deterministic and
      * standardized manner, ensuring a consistent numeric representation.
      * </p>
      *
@@ -218,7 +216,7 @@ public final class Jcs {
      * Canonicalizes a JSON object according to the RFC 8785 JSON Canonicalization
      * Scheme (JCS).
      * <p>
-     * This method serializes the given {@link JsonObject} in a deterministic and
+     * This method serializes the given JSON object in a deterministic and
      * standardized manner, ensuring a consistent output. The canonicalized JSON is
      * written to the provided {@link Writer}.
      * </p>
@@ -311,9 +309,12 @@ public final class Jcs {
      * formatting and lexicographic member ordering for objects.
      * </p>
      *
-     * @param value1  the first JSON value (may be {@code null})
-     * @param value2  the second JSON value (may be {@code null})
-     * @param adapter
+     * @param value1  the first JSON value (may be {@code null} to represent JSON
+     *                null)
+     * @param value2  the second JSON value (may be {@code null} to represent JSON
+     *                null)
+     * @param adapter adapter used to inspect nodes and extract their values for
+     *                comparison
      * @return {@code true} if the two values are canonically equal; {@code false}
      *         otherwise
      */
@@ -360,7 +361,7 @@ public final class Jcs {
      *
      * <p>
      * The comparison is performed by canonicalizing each number using
-     * {@link #canonizeNumber(JsonNumber)} and comparing the resulting strings.
+     * {@link #canonizeNumber(BigDecimal)} and comparing the resulting strings.
      * </p>
      *
      * @param number1 the first number
@@ -378,7 +379,7 @@ public final class Jcs {
      * <p>
      * Objects are equal if they contain the same set of member names (after
      * escaping per JCS) and corresponding member values are canonically equal as
-     * determined by {@link #equals(JsonValue, JsonValue)}.
+     * determined by {@link #equals(Object, Object, NodeAdapter)}.
      * </p>
      *
      * @param object1 the first JSON object
@@ -426,7 +427,7 @@ public final class Jcs {
      * <p>
      * Arrays are equal if they have the same length and each element at position
      * {@code i} is canonically equal as determined by
-     * {@link #equals(JsonValue, JsonValue)}.
+     * {@link #equals(Object, Object, NodeAdapter)}.
      * </p>
      *
      * @param array1  the first JSON array

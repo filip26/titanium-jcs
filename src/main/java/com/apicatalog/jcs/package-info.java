@@ -16,17 +16,12 @@
  * <ul>
  * <li><strong>Canonicalization</strong> – converting JSON values into their
  * canonical string form using
- * {@link com.apicatalog.jcs.Jcs#canonize(javax.json.JsonValue)} and related
+ * {@link com.apicatalog.jcs.Jcs#canonize(Object, com.apicatalog.tree.io.NodeAdapter)} and related
  * methods.</li>
  * <li><strong>Equality comparison</strong> – determining whether two JSON
  * values are canonically equal using
- * {@link com.apicatalog.jcs.Jcs#equals(javax.json.JsonValue, javax.json.JsonValue)}.</li>
+ * {@link com.apicatalog.jcs.Jcs#equals(Object, Object, com.apicatalog.tree.io.NodeAdapter)}.</li>
  * </ul>
  *
- * <p>
- * This package relies on
- * <a href="https://github.com/eclipse-ee4j/jsonp">Jakarta JSON Processing
- * (JSON-P)</a> for parsing and representing JSON data.
- * </p>
  */
 package com.apicatalog.jcs;

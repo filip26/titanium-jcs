@@ -27,7 +27,7 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
   and arrays are compared in their canonical form rather than raw text.
   
 - **Uniform, JSON Library-Agnostic API**  
-  Built on a uniform Tree I/O API for JSON data processing.  
+  Built on a uniform [Tree I/O API](https://github.com/filip26/tree-io) for JSON data processing.  
   Jackson and Jakarta are supported out of the box.
 
 ## Example
