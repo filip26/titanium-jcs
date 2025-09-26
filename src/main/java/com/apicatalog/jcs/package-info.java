@@ -1,32 +1,27 @@
 /**
- * Provides an implementation of the
- * <a href="https://www.rfc-editor.org/rfc/rfc8785"> RFC 8785 JSON
- * Canonicalization Scheme (JCS)</a> in Java.
+ * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">RFC
+ * 8785 JSON Canonicalization Scheme (JCS)</a>.
  *
  * <p>
- * The JCS specification defines a deterministic way to serialize JSON so that
- * the same JSON data model always produces the same byte sequence. This ensures
- * stable and repeatable representations of JSON values, which is critical for
- * use cases such as digital signatures, hashing, and integrity verification.
+ * This package provides a complete API to serialize JSON into a deterministic
+ * format, ensuring that any given JSON data structure always produces the exact
+ * same byte sequence. This is essential for applications requiring stable JSON
+ * representations, such as digital signatures, content addressing, and data
+ * integrity checks.
  * </p>
  *
  * <p>
- * The {@link com.apicatalog.jcs.Jcs} class offers methods for:
+ * The main entry point is the {@link com.apicatalog.jcs.Jcs} class, which
+ * provides static methods for:
  * </p>
+ *
  * <ul>
- * <li><strong>Canonicalization</strong> – converting JSON values into their
- * canonical string form using
- * {@link com.apicatalog.jcs.Jcs#canonize(javax.json.JsonValue)} and related
- * methods.</li>
- * <li><strong>Equality comparison</strong> – determining whether two JSON
- * values are canonically equal using
- * {@link com.apicatalog.jcs.Jcs#equals(javax.json.JsonValue, javax.json.JsonValue)}.</li>
+ * <li><b>Canonicalization:</b> Converting a JSON object into its canonical
+ * string form via the {@code canonize()} methods.</li>
+ * <li><b>Equality:</b> Comparing two JSON objects for canonical equality using
+ * the {@code equals()} method.</li>
  * </ul>
  *
- * <p>
- * This package relies on
- * <a href="https://github.com/eclipse-ee4j/jsonp">Jakarta JSON Processing
- * (JSON-P)</a> for parsing and representing JSON data.
- * </p>
+ * @see com.apicatalog.jcs.Jcs
  */
 package com.apicatalog.jcs;

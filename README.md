@@ -25,38 +25,51 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 - **Canonical JSON Equality Comparator**  
   Compares JSON values for equality under JCS rules, ensuring numbers, objects, 
   and arrays are compared in their canonical form rather than raw text.
+  
+- **Uniform, JSON Library-Agnostic API**  
+  Built on a uniform [Tree I/O API](https://github.com/filip26/tree-io) for JSON data processing.  
+  Jackson and Jakarta are supported out of the box.
 
 ## Example
 
 ```javascript
 // Canonicalize a JSON value and return the canonical string
-var canonicalJson = Jcs.canonize(json);
+var canonicalJson = Jcs.canonize(json, adapter);
 
 // Canonicalize a JSON value and write canonical JSON to a writer
-Jcs.canonize(json, writer);
+Jcs.canonize(json, adapter, writer);
 
 // Compare two JSON values for canonical equality
-if (Jcs.equals(json1, json2)) {
+if (Jcs.equals(json1, json2, adapter)) {
   // values are equal under RFC 8785 rules
 }
 ```
 
-## Installation
 
-### Maven
+## 📦 Installation
 
 ```xml
 <dependency>
     <groupId>com.apicatalog</groupId>
     <artifactId>titanium-jcs</artifactId>
-    <version>1.1.1</version>
+    <version>${titanium-jcs.version}</version>
 </dependency>
-```
 
-Ensure that the JSON-P provider is added to the classpath if it is not already present.
+<!-- Include at least one Tree I/O JSON adapter -->
 
-```xml
+<!-- Jackson 2 -->
+<dependency>
+    <groupId>com.apicatalog</groupId>
+    <artifactId>tree-io-jackson2</artifactId>
+    <version>${tree-io.version}</version>
+</dependency>
 
+<!-- Jakarta (JSONP) -->
+<dependency>
+    <groupId>com.apicatalog</groupId>
+    <artifactId>tree-io-jakarta</artifactId>
+    <version>${tree-io.version}</version>
+</dependency>
 <dependency>
     <groupId>org.glassfish</groupId>
     <artifactId>jakarta.json</artifactId>
@@ -80,14 +93,14 @@ Canonicalize JSON and write canonical JSON to stdout
 cat test.json | ld-cli jcs
 ```
 
-## Contributing
+## 🤝 Contributing
 
-All PR's welcome!
+Contributions are welcome! Please submit a pull request.
 
 
 ### Building
 
-Fork and clone the project repository.
+Fork and clone the repository, then build with Maven:
 
 ```bash
 > cd titanium-jcs
@@ -99,10 +112,11 @@ Fork and clone the project repository.
 
 - [RFC 8785 JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785)
 - [JSON Canonicalization Scheme (JCS)](https://github.com/cyberphone/json-canonicalization)
+- [Tree I/O](https://github.com/filip26/tree-io)
 - [Titanium RDF Canon](https://github.com/filip26/titanium-rdf-canon)
 - [LD-CLI](https://github.com/filip26/ld-cli)
 
-## Commercial Support
+## 💼 Commercial Support
 
 Commercial support and consulting are available.  
 For inquiries, please contact: filip26@gmail.com
