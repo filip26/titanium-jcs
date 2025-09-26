@@ -275,13 +275,10 @@ public final class Jcs {
      *         otherwise
      */
     public static boolean equals(final Object value1, final Object value2, final NodeAdapter adapter) {
-        if (value1 == value2) {
-            return true;
-        }
         if (value1 == null) {
-            return adapter.isNull(value2);
-        }
-        if (value2 == null) {
+            return value2 == null || adapter.isNull(value2);
+
+        } else if (value2 == null) {
             return adapter.isNull(value1);
         }
 
