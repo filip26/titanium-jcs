@@ -44,7 +44,7 @@ import com.apicatalog.tree.io.NodeType;
  * JSON structures.
  * </p>
  *
- * <h3>Usage Examples</h3>
+ * <h2>Usage Examples</h2>
  * 
  * <pre>{@code
  * // Canonicalize a JSON value and get the result as a String
