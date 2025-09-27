@@ -89,7 +89,7 @@ public final class Jcs {
             canonize(value, adapter, writer);
         } catch (IOException e) {
             // This should not happen with a StringWriter
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Unexpected IOException from StringWriter.", e);
         }
         return writer.toString();
     }

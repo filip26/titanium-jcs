@@ -25,16 +25,37 @@ import com.apicatalog.tree.io.NodeGenerator;
 import com.apicatalog.tree.io.NodeModel;
 import com.apicatalog.tree.io.NodeType;
 
+/**
+ * A non-recursive, streaming {@link NodeGenerator} implementation that writes a
+ * canonical representation of a JSON document as defined by
+ * <a href="https://tools.ietf.org/html/rfc8785">JSON Canonicalization Scheme
+ * (JCS), RFC 8785</a>.
+ */
 public final class JcsGenerator extends NodeGenerator {
 
     protected final Writer writer;
 
+    /**
+     * Creates a new generator instance.
+     *
+     * @param writer The writer to which the canonical JSON is written.
+     */
     public JcsGenerator(Writer writer) {
         super(new ArrayDeque<>(), PropertyKeyPolicy.StringOnly);
         this.writer = writer;
         this.entryComparator = NodeModel.comparingEntry(e -> adapter.asString(e.getKey()));
     }
 
+    /**
+     * Generates a canonical representation of the given node structure.
+     *
+     * @param node    The root node of the structure to process.
+     * @param adapter An adapter to navigate the provided node structure.
+     * @throws IOException           if an I/O error occurs.
+     * @throws IllegalStateException if the document generation process ends in an
+     *                               inconsistent state, indicating a malformed
+     *                               input structure.
+     */
     @Override
     public void node(Object node, NodeAdapter adapter) throws IOException {
 
@@ -60,7 +81,7 @@ public final class JcsGenerator extends NodeGenerator {
         }
 
         if (depth > 0) {
-            throw new IllegalStateException();
+            throw new IllegalStateException("The generated document is malformed. A map or a collection is not properly closed.");
         }
     }
 
@@ -109,6 +130,13 @@ public final class JcsGenerator extends NodeGenerator {
         return escaped.toString();
     }
 
+    /**
+     * Writes a scalar value to the output writer in canonical form.
+     *
+     * @throws IOException              if an I/O error occurs.
+     * @throws IllegalArgumentException if the node type is an unsupported scalar
+     *                                  type.
+     */
     @Override
     protected void scalar(Object node) throws IOException {
 
@@ -140,16 +168,32 @@ public final class JcsGenerator extends NodeGenerator {
         }
     }
 
+    /**
+     * Writes the beginning of a map (object).
+     *
+     * @throws IOException if an I/O error occurs.
+     */
     @Override
     protected void beginMap() throws IOException {
         writer.write('{');
     }
 
+    /**
+     * Writes the beginning of a collection (array).
+     *
+     * @throws IOException if an I/O error occurs.
+     */
     @Override
     protected void beginCollection() throws IOException {
         writer.write('[');
     }
 
+    /**
+     * Writes the end of a map or collection.
+     *
+     * @throws IOException           if an I/O error occurs.
+     * @throws IllegalStateException if the generator is in an inconsistent state.
+     */
     @Override
     protected void end() throws IOException {
         if (NodeType.MAP == nodeType) {
@@ -157,7 +201,7 @@ public final class JcsGenerator extends NodeGenerator {
         } else if (NodeType.COLLECTION == nodeType) {
             writer.write(']');
         } else {
-            throw new IllegalStateException();
+            throw new IllegalStateException("Internal error. An unexpected node type [" + nodeType + "] was found when trying to end a structure.");
         }
     }
 }
