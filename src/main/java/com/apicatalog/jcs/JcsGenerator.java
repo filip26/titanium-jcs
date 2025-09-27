@@ -50,8 +50,9 @@ public final class JcsGenerator extends NodeGenerator {
                     && NodeType.MAP != nodeType
                     && (Context.COLLECTION_ELEMENT == nodeContext
                             || Context.PROPERTY_VALUE == nodeContext))
-                    && (((Iterator<?>) stack.peek()).hasNext()))
+                    && ((Iterator<?>) stack.peek()).hasNext())
                     || ((Context.END == nodeContext
+                            && !stack.isEmpty()
                             && stack.peek() instanceof Iterator
                             && ((Iterator<?>) stack.peek()).hasNext()))) {
                 writer.write(',');

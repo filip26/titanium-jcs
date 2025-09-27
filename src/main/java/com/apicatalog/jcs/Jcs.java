@@ -170,7 +170,7 @@ public final class Jcs {
             return JcsGenerator.escape(adapter.stringValue(value1)).equals(JcsGenerator.escape(adapter.stringValue(value2)));
 
         case NUMBER:
-            return numberEquals(adapter.asDecimal(value1), adapter.asDecimal(value2));
+            return canonizeNumber(adapter.asDecimal(value1)).equals(canonizeNumber(adapter.asDecimal(value2)));
 
         case COLLECTION:
             return arrayEquals(value1, value2, adapter);
@@ -181,19 +181,6 @@ public final class Jcs {
         default:
             return false;
         }
-    }
-
-    /**
-     * Compares two JSON numbers for canonical equality by comparing their canonical
-     * string representations.
-     *
-     * @param number1 the first number
-     * @param number2 the second number
-     * @return {@code true} if the numbers are canonically equal, {@code false}
-     *         otherwise
-     */
-    static boolean numberEquals(final BigDecimal number1, final BigDecimal number2) {
-        return canonizeNumber(number1).equals(canonizeNumber(number2));
     }
 
     /**
