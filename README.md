@@ -18,7 +18,7 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 
 ## ✨ Features
 
-- **Canonical JSON Writer**  
+- **Non-recursive Canonical JSON Writer**  
   Deterministically serializes JSON values into a stable, repeatable form 
   following [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785).  
 
