@@ -25,11 +25,11 @@ import com.apicatalog.tree.io.NodeGenerator;
 import com.apicatalog.tree.io.NodeModel;
 import com.apicatalog.tree.io.NodeType;
 
-final class JcsGenerator extends NodeGenerator {
+public final class JcsGenerator extends NodeGenerator {
 
     protected final Writer writer;
 
-    JcsGenerator(Writer writer) {
+    public JcsGenerator(Writer writer) {
         super(new ArrayDeque<>(), PropertyKeyPolicy.StringOnly);
         this.writer = writer;
         this.entryComparator = NodeModel.comparingEntry(e -> adapter.asString(e.getKey()));

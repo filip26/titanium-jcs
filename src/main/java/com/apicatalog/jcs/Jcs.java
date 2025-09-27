@@ -165,14 +165,19 @@ public final class Jcs {
         case TRUE:
         case FALSE:
             return true;
+
         case STRING:
-            return adapter.stringValue(value1).equals(adapter.stringValue(value2));
+            return JcsGenerator.escape(adapter.stringValue(value1)).equals(JcsGenerator.escape(adapter.stringValue(value2)));
+
         case NUMBER:
             return numberEquals(adapter.asDecimal(value1), adapter.asDecimal(value2));
+
         case COLLECTION:
             return arrayEquals(value1, value2, adapter);
+
         case MAP:
             return objectEquals(value1, value2, adapter);
+
         default:
             return false;
         }
@@ -216,7 +221,7 @@ public final class Jcs {
                 .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
-        while (entries1.hasNext()) { // and entries2.hasNext() due to size check
+        while (entries1.hasNext() && entries2.hasNext()) {
             final Entry<?, ?> entry1 = entries1.next();
             final Entry<?, ?> entry2 = entries2.next();
 
@@ -225,7 +230,8 @@ public final class Jcs {
                 return false;
             }
         }
-        return true;
+
+        return !entries1.hasNext() && !entries2.hasNext();
     }
 
     /**
@@ -249,7 +255,7 @@ public final class Jcs {
         final Iterator<?> it1 = adapter.elements(array1).iterator();
         final Iterator<?> it2 = adapter.elements(array2).iterator();
 
-        while (it1.hasNext() && it2.hasNext()) { // and it2.hasNext() due to size check
+        while (it1.hasNext() && it2.hasNext()) {
             if (!equals(it1.next(), it2.next(), adapter)) {
                 return false;
             }
