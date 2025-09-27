@@ -24,6 +24,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map.Entry;
+
 import com.apicatalog.tree.io.NodeAdapter;
 import com.apicatalog.tree.io.NodeModel;
 import com.apicatalog.tree.io.NodeType;
@@ -74,9 +75,6 @@ public final class Jcs {
      */
     private static final DecimalFormat PLAIN_FORMAT = new DecimalFormat("0.#######", new DecimalFormatSymbols(Locale.ENGLISH));
 
-    private Jcs() {
-    }
-
     /**
      * Canonicalizes a JSON value according to JCS (RFC 8785) and returns the result
      * as a {@link String}.
@@ -91,7 +89,7 @@ public final class Jcs {
             canonize(value, adapter, writer);
         } catch (IOException e) {
             // This should not happen with a StringWriter
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Unexpected IOException from StringWriter.", e);
         }
         return writer.toString();
     }
@@ -106,37 +104,7 @@ public final class Jcs {
      * @throws IOException if an I/O error occurs
      */
     public static void canonize(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
-        final NodeType nodeType = value != null ? adapter.type(value) : NodeType.NULL;
-
-        if (NodeType.NULL.equals(nodeType)) {
-            writer.write("null");
-            return;
-        }
-
-        switch (nodeType) {
-        case COLLECTION:
-            canonizeArray(value, adapter, writer);
-            break;
-        case MAP:
-            canonizeObject(value, adapter, writer);
-            break;
-        case NUMBER:
-            writer.write(canonizeNumber(adapter.asDecimal(value)));
-            break;
-        case STRING:
-            writer.write('"');
-            writer.write(escape(adapter.stringValue(value)));
-            writer.write('"');
-            break;
-        case FALSE:
-            writer.write("false");
-            break;
-        case TRUE:
-            writer.write("true");
-            break;
-        default:
-            throw new IllegalArgumentException("Unsupported node type: " + nodeType);
-        }
+        (new JcsGenerator(writer)).node(value, adapter);
     }
 
     /**
@@ -160,103 +128,6 @@ public final class Jcs {
             return E_FORMAT_BIG_DECIMAL.format(number).toLowerCase();
         }
         return PLAIN_FORMAT.format(number);
-    }
-
-    /**
-     * Canonicalizes a JSON array by serializing its elements in order.
-     *
-     * @param value   the array value
-     * @param adapter the node adapter
-     * @param writer  the output writer
-     * @throws IOException if an I/O error occurs
-     */
-    static void canonizeArray(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
-        writer.write('[');
-        final Iterator<?> it = adapter.asIterable(value).iterator();
-        while (it.hasNext()) {
-            canonize(it.next(), adapter, writer);
-            if (it.hasNext()) {
-                writer.write(',');
-            }
-        }
-        writer.write(']');
-    }
-
-    /**
-     * Canonicalizes a JSON object by serializing its key-value pairs in
-     * lexicographical order of the keys.
-     *
-     * @param value   the object value
-     * @param adapter the node adapter
-     * @param writer  the output writer
-     * @throws IOException if an I/O error occurs
-     */
-    static void canonizeObject(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
-        writer.write('{');
-
-        final Iterator<Entry<?, ?>> sorted = adapter.entryStream(value)
-                .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
-                .iterator();
-
-        while (sorted.hasNext()) {
-            final Entry<?, ?> entry = sorted.next();
-
-            writer.write('"');
-            writer.write(escape(adapter.asString(entry.getKey())));
-            writer.write("\":");
-
-            canonize(entry.getValue(), adapter, writer);
-
-            if (sorted.hasNext()) {
-                writer.write(',');
-            }
-        }
-        writer.write('}');
-    }
-
-    /**
-     * Escapes a string according to JCS (RFC 8785, Section 2.5) rules.
-     *
-     * @param value the string to escape
-     * @return the escaped string
-     */
-    static String escape(String value) {
-        final StringBuilder escaped = new StringBuilder();
-        int[] codePoints = value.codePoints().toArray();
-
-        for (int ch : codePoints) {
-            switch (ch) {
-            case '\t':
-                escaped.append("\\t");
-                break;
-            case '\b':
-                escaped.append("\\b");
-                break;
-            case '\n':
-                escaped.append("\\n");
-                break;
-            case '\r':
-                escaped.append("\\r");
-                break;
-            case '\f':
-                escaped.append("\\f");
-                break;
-            case '\"':
-                escaped.append("\\\"");
-                break;
-            case '\\':
-                escaped.append("\\\\");
-                break;
-            default:
-                if (ch >= 0x00 && ch <= 0x1F) {
-                    escaped.append(String.format("\\u%04x", ch));
-                } else {
-                    escaped.appendCodePoint(ch);
-                }
-                break;
-            }
-        }
-        return escaped.toString();
     }
 
     /**
@@ -294,30 +165,22 @@ public final class Jcs {
         case TRUE:
         case FALSE:
             return true;
+
         case STRING:
-            return adapter.stringValue(value1).equals(adapter.stringValue(value2));
+            return JcsGenerator.escape(adapter.stringValue(value1)).equals(JcsGenerator.escape(adapter.stringValue(value2)));
+
         case NUMBER:
-            return numberEquals(adapter.asDecimal(value1), adapter.asDecimal(value2));
+            return canonizeNumber(adapter.asDecimal(value1)).equals(canonizeNumber(adapter.asDecimal(value2)));
+
         case COLLECTION:
             return arrayEquals(value1, value2, adapter);
+
         case MAP:
             return objectEquals(value1, value2, adapter);
+
         default:
             return false;
         }
-    }
-
-    /**
-     * Compares two JSON numbers for canonical equality by comparing their canonical
-     * string representations.
-     *
-     * @param number1 the first number
-     * @param number2 the second number
-     * @return {@code true} if the numbers are canonically equal, {@code false}
-     *         otherwise
-     */
-    static boolean numberEquals(final BigDecimal number1, final BigDecimal number2) {
-        return canonizeNumber(number1).equals(canonizeNumber(number2));
     }
 
     /**
@@ -345,7 +208,7 @@ public final class Jcs {
                 .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
-        while (entries1.hasNext()) { // and entries2.hasNext() due to size check
+        while (entries1.hasNext() && entries2.hasNext()) {
             final Entry<?, ?> entry1 = entries1.next();
             final Entry<?, ?> entry2 = entries2.next();
 
@@ -354,7 +217,8 @@ public final class Jcs {
                 return false;
             }
         }
-        return true;
+
+        return !entries1.hasNext() && !entries2.hasNext();
     }
 
     /**
@@ -378,11 +242,11 @@ public final class Jcs {
         final Iterator<?> it1 = adapter.elements(array1).iterator();
         final Iterator<?> it2 = adapter.elements(array2).iterator();
 
-        while (it1.hasNext()) { // and it2.hasNext() due to size check
+        while (it1.hasNext() && it2.hasNext()) {
             if (!equals(it1.next(), it2.next(), adapter)) {
                 return false;
             }
         }
-        return true;
+        return !it1.hasNext() && !it2.hasNext();
     }
 }
