@@ -108,29 +108,6 @@ public final class Jcs {
     }
 
     /**
-     * Canonicalizes a JSON number according to JCS (RFC 8785).
-     * <p>
-     * Numbers are serialized using plain notation if they are within the range
-     * [10<sup>-21</sup>, 10<sup>21</sup>), and exponential notation otherwise.
-     * </p>
-     *
-     * @param number the {@link BigDecimal} to canonicalize
-     * @return the canonical string representation of the number
-     */
-    static String canonizeNumber(final BigDecimal number) {
-        if (number.compareTo(BigDecimal.ZERO) == 0) {
-            return "0";
-        }
-        if (number.compareTo(BigDecimal.ONE.movePointRight(21)) >= 0) {
-            return E_FORMAT_BIG_DECIMAL.format(number).replace("E", "e+");
-        }
-        if (number.compareTo(BigDecimal.ONE.movePointLeft(21)) < 0 && number.compareTo(BigDecimal.ZERO) != 0) {
-            return E_FORMAT_BIG_DECIMAL.format(number).toLowerCase();
-        }
-        return PLAIN_FORMAT.format(number);
-    }
-
-    /**
      * Compares two JSON values for canonical equality under JCS (RFC 8785).
      *
      * <p>
@@ -167,7 +144,7 @@ public final class Jcs {
             return true;
 
         case STRING:
-            return JcsGenerator.escape(adapter.stringValue(value1)).equals(JcsGenerator.escape(adapter.stringValue(value2)));
+            return escape(adapter.stringValue(value1)).equals(escape(adapter.stringValue(value2)));
 
         case NUMBER:
             return canonizeNumber(adapter.asDecimal(value1)).equals(canonizeNumber(adapter.asDecimal(value2)));
@@ -248,5 +225,75 @@ public final class Jcs {
             }
         }
         return !it1.hasNext() && !it2.hasNext();
+    }
+    
+    
+
+    /**
+     * Canonicalizes a JSON number according to JCS (RFC 8785).
+     * <p>
+     * Numbers are serialized using plain notation if they are within the range
+     * [10<sup>-21</sup>, 10<sup>21</sup>), and exponential notation otherwise.
+     * </p>
+     *
+     * @param number the {@link BigDecimal} to canonicalize
+     * @return the canonical string representation of the number
+     */
+    static String canonizeNumber(final BigDecimal number) {
+        if (number.compareTo(BigDecimal.ZERO) == 0) {
+            return "0";
+        }
+        if (number.compareTo(BigDecimal.ONE.movePointRight(21)) >= 0) {
+            return E_FORMAT_BIG_DECIMAL.format(number).replace("E", "e+");
+        }
+        if (number.compareTo(BigDecimal.ONE.movePointLeft(21)) < 0 && number.compareTo(BigDecimal.ZERO) != 0) {
+            return E_FORMAT_BIG_DECIMAL.format(number).toLowerCase();
+        }
+        return PLAIN_FORMAT.format(number);
+    }
+
+    /**
+     * Escapes a string according to JCS (RFC 8785, Section 2.5) rules.
+     *
+     * @param value the string to escape
+     * @return the escaped string
+     */
+    static String escape(String value) {
+        final StringBuilder escaped = new StringBuilder();
+        int[] codePoints = value.codePoints().toArray();
+
+        for (int ch : codePoints) {
+            switch (ch) {
+            case '\t':
+                escaped.append("\\t");
+                break;
+            case '\b':
+                escaped.append("\\b");
+                break;
+            case '\n':
+                escaped.append("\\n");
+                break;
+            case '\r':
+                escaped.append("\\r");
+                break;
+            case '\f':
+                escaped.append("\\f");
+                break;
+            case '\"':
+                escaped.append("\\\"");
+                break;
+            case '\\':
+                escaped.append("\\\\");
+                break;
+            default:
+                if (ch >= 0x00 && ch <= 0x1F) {
+                    escaped.append(String.format("\\u%04x", ch));
+                } else {
+                    escaped.appendCodePoint(ch);
+                }
+                break;
+            }
+        }
+        return escaped.toString();
     }
 }
