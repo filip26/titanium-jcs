@@ -29,8 +29,8 @@ import com.apicatalog.tree.io.NodeType;
 import com.apicatalog.tree.io.NodeVisitor;
 
 /**
- * A non-recursive, streaming {@link DeprecatedNodeGenerator} implementation
- * that writes a canonical representation of a JSON document as defined by
+ * A non-recursive, streaming {@link NodeGenerator} implementation that writes a
+ * canonical representation of a JSON document as defined by
  * <a href="https://tools.ietf.org/html/rfc8785">JSON Canonicalization Scheme
  * (JCS), RFC 8785</a>.
  */
@@ -93,10 +93,10 @@ public final class JcsGenerator extends NodeVisitor implements NodeGenerator {
     public void end() throws IOException {
         if (currentNodeType == NodeType.MAP) {
             writer.write('}');
-            
+
         } else if (currentNodeType == NodeType.COLLECTION) {
             writer.write(']');
-            
+
         } else {
             throw new IllegalStateException("Internal error. An unexpected node type [" + currentNodeType + "] was found when trying to end a structure.");
         }
