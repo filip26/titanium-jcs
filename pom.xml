@@ -25,7 +25,7 @@
         <tree-io.version>0.9.1</tree-io.version>
         
         <!--  test resources -->
-        <junit.version>5.13.4</junit.version>
+        <junit.version>6.0.0</junit.version>
     </properties>
 
     <name>Titanium JCS</name>
