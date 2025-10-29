@@ -22,11 +22,12 @@ import java.math.BigInteger;
 import java.util.ArrayDeque;
 import java.util.Iterator;
 
+import com.apicatalog.tree.io.Features;
 import com.apicatalog.tree.io.NodeAdapter;
 import com.apicatalog.tree.io.NodeGenerator;
-import com.apicatalog.tree.io.NodeModel;
 import com.apicatalog.tree.io.NodeType;
-import com.apicatalog.tree.io.NodeVisitor;
+import com.apicatalog.tree.io.PolyNode;
+import com.apicatalog.tree.io.traverse.Visitor;
 
 /**
  * A non-recursive, streaming {@link NodeGenerator} implementation that writes a
@@ -34,7 +35,7 @@ import com.apicatalog.tree.io.NodeVisitor;
  * <a href="https://tools.ietf.org/html/rfc8785">JSON Canonicalization Scheme
  * (JCS), RFC 8785</a>.
  */
-public final class JcsGenerator extends NodeVisitor implements NodeGenerator {
+public final class JcsGenerator extends Visitor implements NodeGenerator {
 
     protected final Writer writer;
 
@@ -59,7 +60,7 @@ public final class JcsGenerator extends NodeVisitor implements NodeGenerator {
      *                               input structure.
      */
     public void node(Object node, NodeAdapter adapter) throws IOException {
-        this.entryComparator = NodeModel.comparingStringKeys(adapter);
+        this.entryComparator = PolyNode.comparingStringKeys(adapter);
         root(node, adapter).traverse(this);
     }
 
@@ -79,7 +80,12 @@ public final class JcsGenerator extends NodeVisitor implements NodeGenerator {
      * @throws IOException if an I/O error occurs.
      */
     @Override
-    public void beginCollection() throws IOException {
+    public void beginList() throws IOException {
+        writer.write('[');
+    }
+    
+    @Override
+    public void beginSet() throws IOException {
         writer.write('[');
     }
 
@@ -111,13 +117,13 @@ public final class JcsGenerator extends NodeVisitor implements NodeGenerator {
     @Override
     public void nullValue() throws IOException {
         writer.write("null");
-        next();
+        detectNext();
     }
 
     @Override
     public void booleanValue(boolean node) throws IOException {
         writer.write(node ? "true" : "false");
-        next();
+        detectNext();
     }
 
     @Override
@@ -128,7 +134,7 @@ public final class JcsGenerator extends NodeVisitor implements NodeGenerator {
         if (currentNodeContext == Context.PROPERTY_KEY) {
             writer.write(':');
         } else {
-            next();
+            detectNext();
         }
     }
 
@@ -150,7 +156,7 @@ public final class JcsGenerator extends NodeVisitor implements NodeGenerator {
     @Override
     public void numericValue(BigDecimal node) throws IOException {
         writer.write(Jcs.canonizeNumber(node));
-        next();
+        detectNext();
     }
 
     @Override
@@ -158,11 +164,16 @@ public final class JcsGenerator extends NodeVisitor implements NodeGenerator {
         throw new UnsupportedOperationException();
     }
 
-    protected void next() throws IOException {
+    protected void detectNext() throws IOException {
         if ((currentNodeContext == Context.COLLECTION_ELEMENT
                 || currentNodeContext == Context.PROPERTY_VALUE)
                 && ((Iterator<?>) stack.peek()).hasNext()) {
             writer.write(',');
         }
+    }
+
+    @Override
+    public Features features() {
+        return null;
     }
 }

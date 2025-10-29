@@ -26,8 +26,8 @@ import java.util.Locale;
 import java.util.Map.Entry;
 
 import com.apicatalog.tree.io.NodeAdapter;
-import com.apicatalog.tree.io.NodeModel;
 import com.apicatalog.tree.io.NodeType;
+import com.apicatalog.tree.io.PolyNode;
 
 /**
  * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">RFC
@@ -104,6 +104,10 @@ public final class Jcs {
      * @throws IOException if an I/O error occurs
      */
     public static void canonize(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
+        if (adapter.isNull(value)) {
+            writer.write("null");
+            return;
+        }
         (new JcsGenerator(writer)).node(value, adapter);
     }
 
@@ -179,10 +183,10 @@ public final class Jcs {
         }
 
         final Iterator<Entry<?, ?>> entries1 = adapter.entryStream(object1)
-                .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
+                .sorted(PolyNode.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
         final Iterator<Entry<?, ?>> entries2 = adapter.entryStream(object2)
-                .sorted(NodeModel.comparingEntry(e -> adapter.asString(e.getKey())))
+                .sorted(PolyNode.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
         while (entries1.hasNext() && entries2.hasNext()) {
