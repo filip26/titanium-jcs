@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.apicatalog.tree.io.TreeIOException;
 import com.apicatalog.tree.io.jakarta.JakartaAdapter;
 import com.apicatalog.tree.io.jakcson.Jackson2Adapter;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,7 +29,7 @@ class JcsTest {
     
     @ParameterizedTest
     @ValueSource(strings = { "primitive-data-types", "uni-sort", "array", "object", "unicode", "french" })
-    void testCanonizeJakarta(String name) throws IOException {
+    void testCanonizeJakarta(String name) throws IOException, TreeIOException {
         assertEquals(
                 getResource(name + ".out.json"),
                 Jcs.canonize(getJakartaJson(name + ".in.json"), JakartaAdapter.instance()));
@@ -37,7 +38,7 @@ class JcsTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "primitive-data-types", "uni-sort", "array", "object", "unicode", "french" })
-    void testCanonizeJackson2(String name) throws IOException {
+    void testCanonizeJackson2(String name) throws IOException, TreeIOException {
         assertEquals(
                 getResource(name + ".out.json"),
                 Jcs.canonize(getJacksonJson(name + ".in.json"), Jackson2Adapter.instance()));

@@ -25,9 +25,10 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map.Entry;
 
-import com.apicatalog.tree.io.NodeAdapter;
 import com.apicatalog.tree.io.NodeType;
-import com.apicatalog.tree.io.PolyNode;
+import com.apicatalog.tree.io.TreeAdapter;
+import com.apicatalog.tree.io.TreeIO;
+import com.apicatalog.tree.io.TreeIOException;
 
 /**
  * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">RFC
@@ -41,7 +42,7 @@ import com.apicatalog.tree.io.PolyNode;
  *
  * <p>
  * The implementation is agnostic to the underlying JSON object model by using
- * the {@link com.apicatalog.tree.io.NodeAdapter} interface to interact with
+ * the {@link com.apicatalog.tree.io.TreeAdapter} interface to interact with
  * JSON structures.
  * </p>
  *
@@ -58,8 +59,8 @@ import com.apicatalog.tree.io.PolyNode;
  * boolean areEqual = Jcs.equals(jsonValue1, jsonValue2, adapter);
  * }</pre>
  *
- * @see #canonize(Object, com.apicatalog.tree.io.NodeAdapter)
- * @see #equals(Object, Object, com.apicatalog.tree.io.NodeAdapter)
+ * @see #canonize(Object, com.apicatalog.tree.io.TreeAdapter)
+ * @see #equals(Object, Object, com.apicatalog.tree.io.TreeAdapter)
  */
 public final class Jcs {
 
@@ -80,10 +81,11 @@ public final class Jcs {
      * as a {@link String}.
      *
      * @param value   the JSON value to canonicalize (can be {@code null})
-     * @param adapter the {@link NodeAdapter} used to inspect the JSON value
+     * @param adapter the {@link TreeAdapter} used to inspect the JSON value
      * @return a string containing the canonical JSON representation
+     * @throws TreeIOException
      */
-    public static String canonize(final Object value, final NodeAdapter adapter) {
+    public static String canonize(final Object value, final TreeAdapter adapter) throws TreeIOException {
         final StringWriter writer = new StringWriter();
         try {
             canonize(value, adapter, writer);
@@ -99,13 +101,17 @@ public final class Jcs {
      * to the provided {@link Writer}.
      *
      * @param value   the JSON value to canonicalize (can be {@code null})
-     * @param adapter the {@link NodeAdapter} used to inspect the JSON value
+     * @param adapter the {@link TreeAdapter} used to inspect the JSON value
      * @param writer  the {@link Writer} to which the canonical output is written
      * @throws IOException if an I/O error occurs
      */
-    public static void canonize(final Object value, final NodeAdapter adapter, final Writer writer) throws IOException {
+    public static void canonize(final Object value, final TreeAdapter adapter, final Writer writer) throws IOException, TreeIOException {
         if (adapter.isNull(value)) {
-            writer.write("null");
+            try {
+                writer.write("null");
+            } catch (IOException e) {
+                throw new TreeIOException(e);
+            }
             return;
         }
         (new JcsGenerator(writer)).node(value, adapter);
@@ -122,11 +128,11 @@ public final class Jcs {
      *
      * @param value1  the first JSON value to compare (can be {@code null})
      * @param value2  the second JSON value to compare (can be {@code null})
-     * @param adapter the {@link NodeAdapter} used to inspect the JSON values
+     * @param adapter the {@link TreeAdapter} used to inspect the JSON values
      * @return {@code true} if the values are canonically equal, {@code false}
      *         otherwise
      */
-    public static boolean equals(final Object value1, final Object value2, final NodeAdapter adapter) {
+    public static boolean equals(final Object value1, final Object value2, final TreeAdapter adapter) {
         if (value1 == null) {
             return value2 == null || adapter.isNull(value2);
 
@@ -177,16 +183,16 @@ public final class Jcs {
      * @return {@code true} if the objects are canonically equal, {@code false}
      *         otherwise
      */
-    static boolean objectEquals(final Object object1, final Object object2, final NodeAdapter adapter) {
+    static boolean objectEquals(final Object object1, final Object object2, final TreeAdapter adapter) {
         if (adapter.size(object1) != adapter.size(object2)) {
             return false;
         }
 
         final Iterator<Entry<?, ?>> entries1 = adapter.entryStream(object1)
-                .sorted(PolyNode.comparingEntry(e -> adapter.asString(e.getKey())))
+                .sorted(TreeIO.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
         final Iterator<Entry<?, ?>> entries2 = adapter.entryStream(object2)
-                .sorted(PolyNode.comparingEntry(e -> adapter.asString(e.getKey())))
+                .sorted(TreeIO.comparingEntry(e -> adapter.asString(e.getKey())))
                 .iterator();
 
         while (entries1.hasNext() && entries2.hasNext()) {
@@ -215,7 +221,7 @@ public final class Jcs {
      * @return {@code true} if the arrays are canonically equal, {@code false}
      *         otherwise
      */
-    static boolean arrayEquals(final Object array1, final Object array2, final NodeAdapter adapter) {
+    static boolean arrayEquals(final Object array1, final Object array2, final TreeAdapter adapter) {
         if (adapter.size(array1) != adapter.size(array2)) {
             return false;
         }
@@ -230,8 +236,6 @@ public final class Jcs {
         }
         return !it1.hasNext() && !it2.hasNext();
     }
-    
-    
 
     /**
      * Canonicalizes a JSON number according to JCS (RFC 8785).
