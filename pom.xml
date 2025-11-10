@@ -24,7 +24,7 @@
         <argLine>-Dfile.encoding=UTF-8</argLine>
         
         <jakarta.json.version>2.0.1</jakarta.json.version>
-        <tree-io.version>0.10.0-SNAPSHOT</tree-io.version>
+        <tree-io.version>0.11.0</tree-io.version>
 
         <!--  test resources -->
         <junit.version>5.14.1</junit.version>
