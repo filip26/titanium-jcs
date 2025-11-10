@@ -28,7 +28,7 @@ import com.apicatalog.tree.io.TreeAdapter;
 import com.apicatalog.tree.io.TreeGenerator;
 import com.apicatalog.tree.io.TreeIO;
 import com.apicatalog.tree.io.TreeIOException;
-import com.apicatalog.tree.io.traverse.Visitor;
+import com.apicatalog.tree.io.TreeTraversal;
 
 /**
  * A non-recursive, streaming {@link TreeGenerator} implementation that writes a
@@ -36,7 +36,7 @@ import com.apicatalog.tree.io.traverse.Visitor;
  * <a href="https://tools.ietf.org/html/rfc8785">JSON Canonicalization Scheme
  * (JCS), RFC 8785</a>.
  */
-public final class JcsGenerator extends Visitor implements TreeGenerator {
+public final class JcsGenerator extends TreeTraversal implements TreeGenerator {
 
     protected final Writer writer;
 
@@ -68,7 +68,7 @@ public final class JcsGenerator extends Visitor implements TreeGenerator {
     /**
      * Writes the beginning of a map (object).
      *
-     * @throws IOException if an I/O error occurs.
+     * @throws TreeIOException if an I/O error occurs.
      */
     @Override
     public void beginMap() throws TreeIOException {
