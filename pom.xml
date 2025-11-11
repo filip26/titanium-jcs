@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.apicatalog</groupId>
     <artifactId>titanium-jcs</artifactId>
-    <version>3.0.0-M1</version>
+    <version>3.0.0-M2-SNAPSHOT</version>
     <packaging>jar</packaging>
     
     <url>https://github.com/filip26/titanium-jcs</url>
@@ -23,11 +23,11 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <argLine>-Dfile.encoding=UTF-8</argLine>
         
+        <tree-io.version>0.12.0-SNAPSHOT</tree-io.version>
         <jakarta.json.version>2.0.1</jakarta.json.version>
-        <tree-io.version>0.11.0</tree-io.version>
 
         <!--  test resources -->
-        <junit.version>5.14.1</junit.version>
+        <junit.version>6.0.1</junit.version>
     </properties>
 
     <name>Titanium JCS</name>
