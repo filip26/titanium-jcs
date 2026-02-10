@@ -23,7 +23,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <argLine>-Dfile.encoding=UTF-8</argLine>
         
-        <tree-io.version>0.14.0-SNAPSHOT</tree-io.version>
+        <tree-io.version>0.14.0</tree-io.version>
 
         <!--  test resources -->
         <junit.version>6.0.1</junit.version>
