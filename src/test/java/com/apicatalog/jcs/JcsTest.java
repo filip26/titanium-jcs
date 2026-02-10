@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
@@ -26,7 +28,7 @@ import jakarta.json.JsonValue;
 class JcsTest {
 
     final static ObjectMapper MAPPER = new ObjectMapper();
-    
+
     @ParameterizedTest
     @ValueSource(strings = { "primitive-data-types", "uni-sort", "array", "object", "unicode", "french" })
     void testCanonizeJakarta(String name) throws IOException, TreeIOException {
@@ -34,7 +36,6 @@ class JcsTest {
                 getResource(name + ".out.json"),
                 Jcs.canonize(getJakartaJson(name + ".in.json"), JakartaAdapter.instance()));
     }
-    
 
     @ParameterizedTest
     @ValueSource(strings = { "primitive-data-types", "uni-sort", "array", "object", "unicode", "french" })
@@ -46,11 +47,20 @@ class JcsTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "primitive-data-types", "uni-sort", "array", "object", "unicode", "french" })
-    void testCompare(String name) throws IOException {
+    void testCompareJakarta(String name) throws IOException {
         assertTrue(Jcs.equals(
                 getJakartaJson(name + ".in.json"),
                 getJakartaJson(name + ".out.json"),
                 JakartaAdapter.instance()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "primitive-data-types", "uni-sort", "array", "object", "unicode", "french" })
+    void testCompareJackson2(String name) throws IOException {
+        assertTrue(Jcs.equals(
+                getJacksonJson(name + ".in.json"),
+                getJacksonJson(name + ".out.json"),
+                Jackson2Adapter.instance()));
     }
 
     static String getResource(String name) throws IOException {
@@ -68,9 +78,11 @@ class JcsTest {
             return reader.read();
         }
     }
-    
 
     static JsonNode getJacksonJson(String name) throws IOException {
-        return MAPPER.readTree(JcsTest.class.getResourceAsStream(name));
+        try (var is = JcsTest.class.getResourceAsStream(name);
+                var reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+            return MAPPER.readTree(reader);
+        }
     }
 }
