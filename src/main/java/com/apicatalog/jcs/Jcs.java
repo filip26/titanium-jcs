@@ -21,13 +21,11 @@ import java.io.Writer;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.Iterator;
 import java.util.Locale;
-import java.util.Map.Entry;
 
-import com.apicatalog.tree.io.NodeType;
 import com.apicatalog.tree.io.TreeAdapter;
-import com.apicatalog.tree.io.TreeIO;
+import com.apicatalog.tree.io.TreeComparison;
+import com.apicatalog.tree.io.Tree.NodeType;
 import com.apicatalog.tree.io.TreeIOException;
 
 /**
@@ -159,7 +157,7 @@ public final class Jcs {
         case NUMBER:
             return canonizeNumber(adapter.asDecimal(value1)).equals(canonizeNumber(adapter.asDecimal(value2)));
 
-        case COLLECTION:
+        case SEQUENCE:
             return arrayEquals(value1, value2, adapter);
 
         case MAP:
@@ -184,20 +182,19 @@ public final class Jcs {
      *         otherwise
      */
     static boolean objectEquals(final Object object1, final Object object2, final TreeAdapter adapter) {
-        if (adapter.size(object1) != adapter.size(object2)) {
-            return false;
-        }
 
-        final Iterator<Entry<?, ?>> entries1 = adapter.entryStream(object1)
-                .sorted(TreeIO.comparingEntry(e -> adapter.asString(e.getKey())))
+        final var entries1 = adapter.entryStream(object1)
+                .sorted(TreeComparison.comparingEntryKey(adapter::asString))
                 .iterator();
-        final Iterator<Entry<?, ?>> entries2 = adapter.entryStream(object2)
-                .sorted(TreeIO.comparingEntry(e -> adapter.asString(e.getKey())))
+
+        final var entries2 = adapter.entryStream(object2)
+                .sorted(TreeComparison.comparingEntryKey(adapter::asString))
                 .iterator();
 
         while (entries1.hasNext() && entries2.hasNext()) {
-            final Entry<?, ?> entry1 = entries1.next();
-            final Entry<?, ?> entry2 = entries2.next();
+
+            final var entry1 = entries1.next();
+            final var entry2 = entries2.next();
 
             if (!adapter.asString(entry1.getKey()).equals(adapter.asString(entry2.getKey()))
                     || !equals(entry1.getValue(), entry2.getValue(), adapter)) {
@@ -222,12 +219,9 @@ public final class Jcs {
      *         otherwise
      */
     static boolean arrayEquals(final Object array1, final Object array2, final TreeAdapter adapter) {
-        if (adapter.size(array1) != adapter.size(array2)) {
-            return false;
-        }
 
-        final Iterator<?> it1 = adapter.elements(array1).iterator();
-        final Iterator<?> it2 = adapter.elements(array2).iterator();
+        final var it1 = adapter.elements(array1).iterator();
+        final var it2 = adapter.elements(array2).iterator();
 
         while (it1.hasNext() && it2.hasNext()) {
             if (!equals(it1.next(), it2.next(), adapter)) {
