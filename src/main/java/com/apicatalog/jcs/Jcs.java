@@ -23,9 +23,9 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
+import com.apicatalog.tree.io.Tree.NodeType;
 import com.apicatalog.tree.io.TreeAdapter;
 import com.apicatalog.tree.io.TreeComparison;
-import com.apicatalog.tree.io.Tree.NodeType;
 import com.apicatalog.tree.io.TreeIOException;
 
 /**
@@ -66,13 +66,15 @@ public final class Jcs {
      * Exponent notation format for numbers outside the range [10<sup>-21</sup>,
      * 10<sup>21</sup>).
      */
-    private static final DecimalFormat E_FORMAT_BIG_DECIMAL = new DecimalFormat("0E00", new DecimalFormatSymbols(Locale.ENGLISH));
+    private static final DecimalFormat E_FORMAT_BIG_DECIMAL = new DecimalFormat("0E00",
+            new DecimalFormatSymbols(Locale.ENGLISH));
 
     /**
      * Plain notation format for numbers within the range [10<sup>-21</sup>,
      * 10<sup>21</sup>).
      */
-    private static final DecimalFormat PLAIN_FORMAT = new DecimalFormat("0.#######", new DecimalFormatSymbols(Locale.ENGLISH));
+    private static final DecimalFormat PLAIN_FORMAT = new DecimalFormat("0.#####################",
+            new DecimalFormatSymbols(Locale.ENGLISH));
 
     /**
      * Canonicalizes a JSON value according to JCS (RFC 8785) and returns the result
@@ -103,7 +105,8 @@ public final class Jcs {
      * @param writer  the {@link Writer} to which the canonical output is written
      * @throws IOException if an I/O error occurs
      */
-    public static void canonize(final Object value, final TreeAdapter adapter, final Writer writer) throws IOException, TreeIOException {
+    public static void canonize(final Object value, final TreeAdapter adapter, final Writer writer)
+            throws IOException, TreeIOException {
         if (adapter.isNull(value)) {
             try {
                 writer.write("null");
@@ -245,13 +248,13 @@ public final class Jcs {
         if (number.compareTo(BigDecimal.ZERO) == 0) {
             return "0";
         }
-        if (number.compareTo(BigDecimal.ONE.movePointRight(21)) >= 0) {
-            return E_FORMAT_BIG_DECIMAL.format(number).replace("E", "e+");
-        }
-        if (number.compareTo(BigDecimal.ONE.movePointLeft(21)) < 0 && number.compareTo(BigDecimal.ZERO) != 0) {
+        if (number.scale() >= 21) {
             return E_FORMAT_BIG_DECIMAL.format(number).toLowerCase();
         }
-        return PLAIN_FORMAT.format(number);
+        if (number.scale() <= -21) {
+            return E_FORMAT_BIG_DECIMAL.format(number).replace("E", "e+");
+        }
+        return PLAIN_FORMAT.format(number.doubleValue());
     }
 
     /**
