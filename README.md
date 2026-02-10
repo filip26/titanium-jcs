@@ -1,6 +1,6 @@
 # Titanium JCS
 
-> ❌ **Danger:** JCS is flawed and non-portable. It forces other languages to re-implement ECMAScript’s buggy number heuristics, causing subtle incompatibilities and fragile behavior. Use it **only if explicitly required**.
+> ⚠️ **Danger:** JCS is flawed and non-portable. It forces other languages to re-implement ECMAScript’s buggy number heuristics, causing subtle incompatibilities and fragile behavior. Use it **only if explicitly required**.
 
 The JSON Canonicalization Scheme (JCS) defines a deterministic way to serialize JSON so that the same JSON data model always produces the same byte sequence.  
 
@@ -11,7 +11,7 @@ By normalizing JSON into a canonical form, JCS ensures interoperability across s
 Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785).
 
 
-[![Java 17 CI](https://github.com/filip26/titanium-jcs/actions/workflows/java17-build.yml/badge.svg)](https://github.com/filip26/titanium-jcs/actions/workflows/java17-build.yml)
+[![Java 21 CI](https://github.com/filip26/titanium-jcs/actions/workflows/java21-build.yml/badge.svg)](https://github.com/filip26/titanium-jcs/actions/workflows/java21-build.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![javadoc](https://javadoc.io/badge2/com.apicatalog/titanium-jcs/javadoc.svg)](https://javadoc.io/doc/com.apicatalog/titanium-jcs)
