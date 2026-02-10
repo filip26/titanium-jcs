@@ -1,5 +1,7 @@
 # Titanium JCS
 
+> ❌ **Danger:** JCS is flawed and non-portable. It forces other languages to re-implement ECMAScript’s buggy number heuristics, causing subtle incompatibilities and fragile behavior. Use it **only if explicitly required**.
+
 The JSON Canonicalization Scheme (JCS) defines a deterministic way to serialize JSON so that the same JSON data model always produces the same byte sequence.  
 
 This is critical for use cases such as digital signatures, hashing, and data integrity verification, where even small differences in whitespace, member ordering, or number formatting would otherwise break validation.  
