@@ -86,14 +86,15 @@ public final class Jcs {
      * @throws TreeIOException
      */
     public static String canonize(final Object value, final TreeAdapter adapter) throws TreeIOException {
-        final StringWriter writer = new StringWriter();
         try {
+            final var writer = new StringWriter();
             canonize(value, adapter, writer);
+            return writer.toString();
+
         } catch (IOException e) {
             // This should not happen with a StringWriter
             throw new IllegalStateException("Unexpected IOException from StringWriter.", e);
         }
-        return writer.toString();
     }
 
     /**
@@ -103,16 +104,13 @@ public final class Jcs {
      * @param value   the JSON value to canonicalize (can be {@code null})
      * @param adapter the {@link TreeAdapter} used to inspect the JSON value
      * @param writer  the {@link Writer} to which the canonical output is written
-     * @throws IOException if an I/O error occurs
+     * @throws IOException     if an I/O error occurs
+     * @throws TreeIOException
      */
     public static void canonize(final Object value, final TreeAdapter adapter, final Writer writer)
             throws IOException, TreeIOException {
         if (adapter.isNull(value)) {
-            try {
-                writer.write("null");
-            } catch (IOException e) {
-                throw new TreeIOException(e);
-            }
+            writer.write("null");
             return;
         }
         (new JcsGenerator(writer)).node(value, adapter);

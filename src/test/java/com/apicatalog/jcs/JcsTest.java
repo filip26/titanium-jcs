@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.json.Json;
-import jakarta.json.JsonReader;
 import jakarta.json.JsonValue;
 
 class JcsTest {
@@ -62,7 +61,7 @@ class JcsTest {
     }
 
     static String getResource(String name) throws IOException {
-        try (BufferedInputStream is = new BufferedInputStream(JcsTest.class.getResourceAsStream(name))) {
+        try (var is = new BufferedInputStream(JcsTest.class.getResourceAsStream(name))) {
             return new BufferedReader(
                     new InputStreamReader(is, StandardCharsets.UTF_8))
                     .lines()
@@ -71,7 +70,7 @@ class JcsTest {
     }
 
     static JsonValue getJakartaJson(String name) {
-        try (JsonReader reader = Json.createReader(
+        try (var reader = Json.createReader(
                 JcsTest.class.getResourceAsStream(name))) {
             return reader.read();
         }
