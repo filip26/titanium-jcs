@@ -1,6 +1,6 @@
 # Titanium JCS
 
-> ⚠️ **Danger:** JCS is flawed and non-portable. It forces other languages to re-implement ECMAScript’s buggy number heuristics, causing subtle incompatibilities and fragile behavior. Use it **only if explicitly required**.
+> ⚠️ **Warning** JCS is flawed and lacks true portability. By forcing other languages to emulate ECMAScript’s number handling, it creates fragile, incompatible implementations. Use it only if explicitly required.
 
 The JSON Canonicalization Scheme (JCS) defines a deterministic way to serialize JSON so that the same JSON data model always produces the same byte sequence.  
 
@@ -9,7 +9,6 @@ This is critical for use cases such as digital signatures, hashing, and data int
 By normalizing JSON into a canonical form, JCS ensures interoperability across systems and guarantees stable, repeatable representations of data.  
 
 Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785).
-
 
 [![Java 21 CI](https://github.com/filip26/titanium-jcs/actions/workflows/java21-build.yml/badge.svg)](https://github.com/filip26/titanium-jcs/actions/workflows/java21-build.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)

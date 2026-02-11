@@ -6,9 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
@@ -22,7 +20,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.json.Json;
-import jakarta.json.JsonReader;
 import jakarta.json.JsonValue;
 
 class JcsTest {
@@ -64,7 +61,7 @@ class JcsTest {
     }
 
     static String getResource(String name) throws IOException {
-        try (BufferedInputStream is = new BufferedInputStream(JcsTest.class.getResourceAsStream(name))) {
+        try (var is = new BufferedInputStream(JcsTest.class.getResourceAsStream(name))) {
             return new BufferedReader(
                     new InputStreamReader(is, StandardCharsets.UTF_8))
                     .lines()
@@ -73,7 +70,7 @@ class JcsTest {
     }
 
     static JsonValue getJakartaJson(String name) {
-        try (JsonReader reader = Json.createReader(
+        try (var reader = Json.createReader(
                 JcsTest.class.getResourceAsStream(name))) {
             return reader.read();
         }
