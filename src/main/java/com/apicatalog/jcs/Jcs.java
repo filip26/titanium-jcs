@@ -22,11 +22,13 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
+import java.util.Map;
 
 import com.apicatalog.tree.io.Tree.NodeType;
 import com.apicatalog.tree.io.TreeAdapter;
 import com.apicatalog.tree.io.TreeComparison;
 import com.apicatalog.tree.io.TreeIOException;
+import com.apicatalog.tree.io.java.JavaAdapter;
 
 /**
  * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">RFC
@@ -77,6 +79,19 @@ public final class Jcs {
             new DecimalFormatSymbols(Locale.ENGLISH));
 
     /**
+     * Canonicalizes as JSON object according to JCS (RFC 8785) and returns the
+     * result as a {@link String}.
+     *
+     * @param value the Map representing JSON object to canonicalize (can be
+     *              {@code null})
+     * @return a string containing the canonical JSON representation
+     * @throws TreeIOException
+     */
+    public static String canonize(final Map<String, Object> value) throws TreeIOException {
+        return canonize(value, JavaAdapter.instance());
+    }
+
+    /**
      * Canonicalizes a JSON value according to JCS (RFC 8785) and returns the result
      * as a {@link String}.
      *
@@ -95,6 +110,21 @@ public final class Jcs {
             // This should not happen with a StringWriter
             throw new IllegalStateException("Unexpected IOException from StringWriter.", e);
         }
+    }
+
+    /**
+     * Canonicalizes as JSON object according to JCS (RFC 8785) and writes the
+     * output to the provided {@link Writer}.
+     *
+     * @param value  the Map representing JSON object to canonicalize (can be
+     *               {@code null})
+     * @param writer the {@link Writer} to which the canonical output is written
+     * @throws IOException     if an I/O error occurs
+     * @throws TreeIOException
+     */
+    public static void canonize(final Map<String, Object> value, final Writer writer)
+            throws IOException, TreeIOException {
+        canonize(value, JavaAdapter.instance(), writer);
     }
 
     /**
