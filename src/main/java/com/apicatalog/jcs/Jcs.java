@@ -113,11 +113,11 @@ public final class Jcs {
     }
 
     /**
-     * Canonicalizes as JSON object according to JCS (RFC 8785) and writes the
-     * output to the provided {@link Writer}.
+     * Canonicalizes {@link Map} representing JSON object according to JCS (RFC
+     * 8785) and writes the output to the provided {@link Writer}.
      *
-     * @param value  the Map representing JSON object to canonicalize (can be
-     *               {@code null})
+     * @param value  the {@link Map} representing JSON object to canonicalize (can
+     *               be {@code null})
      * @param writer the {@link Writer} to which the canonical output is written
      * @throws IOException     if an I/O error occurs
      * @throws TreeIOException
@@ -144,6 +144,27 @@ public final class Jcs {
             return;
         }
         (new JcsGenerator(writer)).node(value, adapter);
+    }
+
+    /**
+     * Compares two {@link Map} representing JSON objects for canonical equality
+     * under JCS (RFC 8785).
+     *
+     * <p>
+     * Two JSON values are canonically equal if their data models are equivalent.
+     * This involves comparing numbers by their canonical string representation and
+     * objects by their members, sorted lexicographically by key.
+     * </p>
+     *
+     * @param value1 the first {@link Map} representing JSON object to compare (can
+     *               be {@code null})
+     * @param value2 the second {@link Map} representing JSON object to compare (can
+     *               be {@code null})
+     * @return {@code true} if the values are canonically equal, {@code false}
+     *         otherwise
+     */
+    public static boolean equals(final Map<String, Object> value1, final Map<String, Object> value2) {
+        return equals(value1, value2, JavaAdapter.instance());
     }
 
     /**
