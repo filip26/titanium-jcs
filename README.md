@@ -8,6 +8,8 @@ By normalizing JSON into a canonical form, JCS ensures interoperability across s
 
 Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785).
 
+> 📝 Note: Handling decimals in JSON is a known challenge, and certain corner cases may not behave as expected. JCS adheres to ECMAScript’s number handling, which can reflect these limitations with decimal values.
+
 [![Java 21 CI](https://github.com/filip26/titanium-jcs/actions/workflows/java21-build.yml/badge.svg)](https://github.com/filip26/titanium-jcs/actions/workflows/java21-build.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
@@ -28,8 +30,6 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 - **Uniform, JSON Library-Agnostic API**  
   Built on a uniform [Tree I/O API](https://github.com/filip26/tree-io) for JSON data processing.  
   Jackson and Jakarta are supported out of the box.
-
-> 📝 Note: Handling decimals in JSON is a known challenge, and certain corner cases may not behave as expected. JCS adheres to ECMAScript’s number handling, which can reflect these limitations with decimal values.
 
 ## Example
 
