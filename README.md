@@ -1,12 +1,5 @@
 # Titanium JCS
 
-The JSON Canonicalization Scheme (JCS) defines a deterministic way to serialize JSON so that the same JSON data model always produces the same byte sequence.  
-
-This is critical for use cases such as digital signatures, hashing, and data integrity verification, where even small differences in whitespace, member ordering, or number formatting would otherwise break validation.  
-
-By normalizing JSON into a canonical form, JCS ensures interoperability across systems and guarantees stable, repeatable representations of data.  
-
-Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785).
 
 [![Java 21 CI](https://github.com/filip26/titanium-jcs/actions/workflows/java21-build.yml/badge.svg)](https://github.com/filip26/titanium-jcs/actions/workflows/java21-build.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
@@ -14,6 +7,15 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 [![javadoc](https://javadoc.io/badge2/com.apicatalog/titanium-jcs/javadoc.svg)](https://javadoc.io/doc/com.apicatalog/titanium-jcs)
 [![Maven Central](https://img.shields.io/maven-central/v/com.apicatalog/titanium-jcs.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:com.apicatalog%20AND%20a:titanium-jcs)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+
+The JSON Canonicalization Scheme (JCS) defines a deterministic way to serialize JSON so that the same JSON data model always produces the same byte sequence.  
+
+This is critical for use cases such as digital signatures, hashing, and data integrity verification, where even small differences in whitespace, member ordering, or number formatting would otherwise break validation.  
+
+By normalizing JSON into a canonical form, JCS ensures interoperability across systems and guarantees stable, repeatable representations of data.  
+
+Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785).
 
 > 📝 Note: Handling decimals in JSON is a known challenge, and certain corner cases may not behave as expected. JCS adheres to ECMAScript’s number handling, which can reflect these limitations with decimal values.
 
