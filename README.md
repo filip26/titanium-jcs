@@ -1,7 +1,5 @@
 # Titanium JCS
 
-> ⚠️ **Warning** JCS is flawed and lacks true portability. By forcing other languages to emulate ECMAScript’s number handling, it creates fragile, incompatible implementations. Use it only if explicitly required.
-
 The JSON Canonicalization Scheme (JCS) defines a deterministic way to serialize JSON so that the same JSON data model always produces the same byte sequence.  
 
 This is critical for use cases such as digital signatures, hashing, and data integrity verification, where even small differences in whitespace, member ordering, or number formatting would otherwise break validation.  
@@ -30,6 +28,8 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 - **Uniform, JSON Library-Agnostic API**  
   Built on a uniform [Tree I/O API](https://github.com/filip26/tree-io) for JSON data processing.  
   Jackson and Jakarta are supported out of the box.
+
+> 📝 Note: Handling decimals in JSON is a known challenge, and certain corner cases may not behave as expected. JCS adheres to ECMAScript’s number handling, which can reflect these limitations with decimal values.
 
 ## Example
 
