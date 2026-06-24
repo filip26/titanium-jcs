@@ -16,16 +16,18 @@ import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.apicatalog.tree.io.jakarta.JakartaReader;
-import com.apicatalog.tree.io.jakcson.Jackson2Reader;
+import com.apicatalog.tree.io.Tree;
+import com.apicatalog.tree.io.jakarta.JakartaParser;
+import com.apicatalog.tree.io.jakcson.Jackson2Parser;
 import com.fasterxml.jackson.core.JsonFactory;
 
 import jakarta.json.Json;
+import jakarta.json.stream.JsonParserFactory;
 
 class JcsTest {
 
-    static JakartaReader JAKARTA_READER = new JakartaReader(Json.createParserFactory(Map.of()));
-    static Jackson2Reader JACKSON_READER = new Jackson2Reader(JsonFactory.builder().build());
+    static JsonParserFactory JAKARTA = Json.createParserFactory(Map.of());
+    static JsonFactory JACKSON = JsonFactory.builder().build();
 
     @ParameterizedTest
     @MethodSource({ "resources" })
@@ -77,10 +79,14 @@ class JcsTest {
     }
 
     static Object getJakartaJson(String name) throws IOException {
-        return JAKARTA_READER.read(JcsTest.class.getResourceAsStream(name));
+        try (var parser = JakartaParser.createParser(JcsTest.class.getResourceAsStream(name), JAKARTA)) {
+            return Tree.read(parser);
+        }
     }
 
     static Object getJacksonJson(String name) throws IOException {
-        return JACKSON_READER.read(JcsTest.class.getResourceAsStream(name));
+        try (var parser = Jackson2Parser.createParser(JcsTest.class.getResourceAsStream(name), JACKSON)) {
+            return Tree.read(parser);
+        }
     }
 }
