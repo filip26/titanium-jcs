@@ -18,17 +18,15 @@ package com.apicatalog.jcs;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.math.BigDecimal;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
+import java.util.HexFormat;
 import java.util.Map;
+import java.util.Map.Entry;
 
-import com.apicatalog.tree.io.Tree.NodeType;
-import com.apicatalog.tree.io.TreeAdapter;
-import com.apicatalog.tree.io.TreeComparison;
+import com.apicatalog.tree.io.Tree;
+import com.apicatalog.tree.io.TreeCursor;
 import com.apicatalog.tree.io.TreeIOException;
-import com.apicatalog.tree.io.java.JavaAdapter;
+import com.apicatalog.tree.io.TreeTraverser;
+import com.apicatalog.tree.io.java.NativeTraverser;
 
 /**
  * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">RFC
@@ -60,23 +58,28 @@ import com.apicatalog.tree.io.java.JavaAdapter;
  * }</pre>
  *
  * @see #canonize(Object, com.apicatalog.tree.io.TreeAdapter)
- * @see #equals(Object, Object, com.apicatalog.tree.io.TreeAdapter)
+ * @see #valueEquals(Object, Object, com.apicatalog.tree.io.TreeAdapter)
  */
 public final class Jcs {
 
-    /**
-     * Exponent notation format for numbers outside the range [10<sup>-21</sup>,
-     * 10<sup>21</sup>).
-     */
-    private static final DecimalFormat E_FORMAT_BIG_DECIMAL = new DecimalFormat("0E00",
-            new DecimalFormatSymbols(Locale.ENGLISH));
+    public static int entryKeyComparator(Entry<?, ?> e1, Entry<?, ?> e2) {
+        if (e1.getKey() instanceof String key1 && e2.getKey() instanceof String key2) {
+            return key1.compareTo(key2);
+        }
+        throw new IllegalArgumentException();
+    }
 
-    /**
-     * Plain notation format for numbers within the range [10<sup>-21</sup>,
-     * 10<sup>21</sup>).
-     */
-    private static final DecimalFormat PLAIN_FORMAT = new DecimalFormat("0.#####################",
-            new DecimalFormatSymbols(Locale.ENGLISH));
+    public static boolean scalarEquals(TreeCursor cursor1, TreeCursor cursor2) throws TreeIOException {
+        return switch (cursor1.nodeType()) {
+        case NULL, TRUE, FALSE -> true;
+
+        case STRING -> escape(cursor1.stringValue()).equals(escape(cursor2.stringValue()));
+
+        case NUMBER -> canonizeNumber(cursor1.numberValue()).equals(canonizeNumber(cursor2.numberValue()));
+
+        default -> throw new IllegalArgumentException("Expected scalar node but got " + cursor1.nodeType());
+        };
+    }
 
     /**
      * Canonicalizes as JSON object according to JCS (RFC 8785) and returns the
@@ -87,29 +90,36 @@ public final class Jcs {
      * @return a string containing the canonical JSON representation
      * @throws TreeIOException
      */
-    public static String canonize(final Map<String, Object> value) throws TreeIOException {
-        return canonize(value, JavaAdapter.instance());
+    public static String canonize(final Object value) throws TreeIOException {
+        var writer = new StringWriter();
+        canonize(value, writer);
+        return writer.toString();
+    }
+
+    /**
+     * Canonicalizes a JSON value according to JCS (RFC 8785) and writes the output
+     * to the provided {@link Writer}.
+     *
+     * @param value  the JSON value to canonicalize (can be {@code null})
+     * @param writer the {@link Writer} to which the canonical output is written
+     * @throws TreeIOException
+     */
+    public static void canonize(final Object value, Writer writer) throws TreeIOException {
+        canonize(new NativeTraverser(value, Jcs::entryKeyComparator), writer);
     }
 
     /**
      * Canonicalizes a JSON value according to JCS (RFC 8785) and returns the result
      * as a {@link String}.
      *
-     * @param value   the JSON value to canonicalize (can be {@code null})
-     * @param adapter the {@link TreeAdapter} used to inspect the JSON value
+     * @param value the JSON value to canonicalize (can be {@code null})
      * @return a string containing the canonical JSON representation
      * @throws TreeIOException
      */
-    public static String canonize(final Object value, final TreeAdapter adapter) throws TreeIOException {
-        try {
-            final var writer = new StringWriter();
-            canonize(value, adapter, writer);
-            return writer.toString();
-
-        } catch (IOException e) {
-            // This should not happen with a StringWriter
-            throw new IllegalStateException("Unexpected IOException from StringWriter.", e);
-        }
+    protected static String canonize(TreeTraverser<?> traverser) throws TreeIOException {
+        final var writer = new StringWriter();
+        canonize(traverser, writer);
+        return writer.toString();
     }
 
     /**
@@ -122,28 +132,8 @@ public final class Jcs {
      * @throws IOException     if an I/O error occurs
      * @throws TreeIOException
      */
-    public static void canonize(final Map<String, Object> value, final Writer writer)
-            throws IOException, TreeIOException {
-        canonize(value, JavaAdapter.instance(), writer);
-    }
-
-    /**
-     * Canonicalizes a JSON value according to JCS (RFC 8785) and writes the output
-     * to the provided {@link Writer}.
-     *
-     * @param value   the JSON value to canonicalize (can be {@code null})
-     * @param adapter the {@link TreeAdapter} used to inspect the JSON value
-     * @param writer  the {@link Writer} to which the canonical output is written
-     * @throws IOException     if an I/O error occurs
-     * @throws TreeIOException
-     */
-    public static void canonize(final Object value, final TreeAdapter adapter, final Writer writer)
-            throws IOException, TreeIOException {
-        if (adapter.isNull(value)) {
-            writer.write("null");
-            return;
-        }
-        (new JcsGenerator(writer)).node(value, adapter);
+    protected static void canonize(TreeTraverser<?> traverser, Writer writer) throws TreeIOException {
+        Tree.write(traverser, new JcsEmitter(writer));
     }
 
     /**
@@ -162,148 +152,139 @@ public final class Jcs {
      *               be {@code null})
      * @return {@code true} if the values are canonically equal, {@code false}
      *         otherwise
+     * @throws TreeIOException
      */
-    public static boolean equals(final Map<String, Object> value1, final Map<String, Object> value2) {
-        return equals(value1, value2, JavaAdapter.instance());
+//    public static boolean equals(final Map<String, Object> value1, final Map<String, Object> value2) throws TreeIOException {
+    public static boolean equals(final Object value1, final Object value2) throws TreeIOException {
+
+        var cursor1 = new NativeTraverser(value1, Jcs::entryKeyComparator);
+        var cursor2 = new NativeTraverser(value2, Jcs::entryKeyComparator);
+
+        return equals(cursor1, cursor2);
     }
 
-    /**
-     * Compares two JSON values for canonical equality under JCS (RFC 8785).
-     *
-     * <p>
-     * Two JSON values are canonically equal if their data models are equivalent.
-     * This involves comparing numbers by their canonical string representation and
-     * objects by their members, sorted lexicographically by key.
-     * </p>
-     *
-     * @param value1  the first JSON value to compare (can be {@code null})
-     * @param value2  the second JSON value to compare (can be {@code null})
-     * @param adapter the {@link TreeAdapter} used to inspect the JSON values
-     * @return {@code true} if the values are canonically equal, {@code false}
-     *         otherwise
-     */
-    public static boolean equals(final Object value1, final Object value2, final TreeAdapter adapter) {
-        if (value1 == null) {
-            return value2 == null || adapter.isNull(value2);
-
-        } else if (value2 == null) {
-            return adapter.isNull(value1);
-        }
-
-        NodeType nodeType1 = adapter.type(value1);
-        NodeType nodeType2 = adapter.type(value2);
-
-        if (nodeType1 != nodeType2) {
-            return false;
-        }
-
-        switch (nodeType1) {
-        case NULL:
-        case TRUE:
-        case FALSE:
-            return true;
-
-        case STRING:
-            return escape(adapter.stringValue(value1)).equals(escape(adapter.stringValue(value2)));
-
-        case NUMBER:
-            return canonizeNumber(adapter.asDecimal(value1)).equals(canonizeNumber(adapter.asDecimal(value2)));
-
-        case SEQUENCE:
-            return arrayEquals(value1, value2, adapter);
-
-        case MAP:
-            return objectEquals(value1, value2, adapter);
-
-        default:
-            return false;
-        }
-    }
-
-    /**
-     * Compares two JSON objects for canonical equality.
-     * <p>
-     * Objects are equal if they have the same set of keys and the corresponding
-     * values for each key are canonically equal.
-     * </p>
-     *
-     * @param object1 the first object
-     * @param object2 the second object
-     * @param adapter the node adapter
-     * @return {@code true} if the objects are canonically equal, {@code false}
-     *         otherwise
-     */
-    static boolean objectEquals(final Object object1, final Object object2, final TreeAdapter adapter) {
-
-        final var entries1 = adapter.entryStream(object1)
-                .sorted(TreeComparison.comparingEntryKey(adapter::asString))
-                .iterator();
-
-        final var entries2 = adapter.entryStream(object2)
-                .sorted(TreeComparison.comparingEntryKey(adapter::asString))
-                .iterator();
-
-        while (entries1.hasNext() && entries2.hasNext()) {
-
-            final var entry1 = entries1.next();
-            final var entry2 = entries2.next();
-
-            if (!adapter.asString(entry1.getKey()).equals(adapter.asString(entry2.getKey()))
-                    || !equals(entry1.getValue(), entry2.getValue(), adapter)) {
-                return false;
-            }
-        }
-
-        return !entries1.hasNext() && !entries2.hasNext();
-    }
-
-    /**
-     * Compares two JSON arrays for canonical equality.
-     * <p>
-     * Arrays are equal if they have the same length and their elements are
-     * canonically equal in the same order.
-     * </p>
-     *
-     * @param array1  the first array
-     * @param array2  the second array
-     * @param adapter the node adapter
-     * @return {@code true} if the arrays are canonically equal, {@code false}
-     *         otherwise
-     */
-    static boolean arrayEquals(final Object array1, final Object array2, final TreeAdapter adapter) {
-
-        final var it1 = adapter.elements(array1).iterator();
-        final var it2 = adapter.elements(array2).iterator();
-
-        while (it1.hasNext() && it2.hasNext()) {
-            if (!equals(it1.next(), it2.next(), adapter)) {
-                return false;
-            }
-        }
-        return !it1.hasNext() && !it2.hasNext();
+    protected static boolean equals(TreeTraverser<?> node1, TreeTraverser<?> node2) throws TreeIOException {
+        return Tree.equals(node1, node2, Jcs::scalarEquals);
     }
 
     /**
      * Canonicalizes a JSON number according to JCS (RFC 8785).
-     * <p>
-     * Numbers are serialized using plain notation if they are within the range
-     * [10<sup>-21</sup>, 10<sup>21</sup>), and exponential notation otherwise.
-     * </p>
      *
-     * @param number the {@link BigDecimal} to canonicalize
+     * Numbers are strictly restricted to IEEE 754 double-precision format.
+     * Serialization matches ECMAScript Number.prototype.toString() rules exactly.
+     *
+     * @param number the BigDecimal to canonicalize
      * @return the canonical string representation of the number
+     * @throws IllegalArgumentException if the number overflows IEEE limits
      */
-    static String canonizeNumber(final BigDecimal number) {
-        if (number.compareTo(BigDecimal.ZERO) == 0) {
+    static String canonizeNumber(final Number number) {
+        // JCS assumes inputs are already parsed as IEEE-754 doubles.
+        // Conversion natively applies standard IEEE rounding to arbitrary precision
+        // inputs.
+        double d = number.doubleValue();
+
+        if (Double.isInfinite(d) || Double.isNaN(d)) {
+            throw new IllegalArgumentException("RFC 8785 Compliance Error: Number exceeds IEEE 754 limits");
+        }
+
+        if (d == 0.0) {
             return "0";
         }
-        if (number.scale() >= 21) {
-            return E_FORMAT_BIG_DECIMAL.format(number).toLowerCase();
+
+        // Java 21 Double.toString() (almost always) uses Ryu and produces the shortest
+        // round-trip IEEE-754 representation, which matches ECMAScript
+        // Number serialization for all finite doubles.
+        String javaString = Double.toString(d);
+
+        boolean isNegative = d < 0.0;
+        int start = isNegative ? 1 : 0;
+
+        int eIndex = javaString.indexOf('E', start);
+        if (eIndex == -1) {
+            // Truncate Java's forced ".0" for integers to match ECMAScript
+            if (javaString.endsWith(".0")) {
+                String res = javaString.substring(start, javaString.length() - 2);
+                return isNegative ? "-" + res : res;
+            }
+            return javaString;
         }
-        if (number.scale() <= -21) {
-            return E_FORMAT_BIG_DECIMAL.format(number).replace("E", "e+");
+
+        String mantissa = javaString.substring(start, eIndex);
+        int dot = mantissa.indexOf('.');
+
+        char firstDigit;
+        String fractionDigits;
+
+        if (dot < 0) {
+            firstDigit = mantissa.charAt(0);
+            fractionDigits = mantissa.length() > 1 ? mantissa.substring(1) : "";
+        } else {
+            firstDigit = mantissa.charAt(0);
+            fractionDigits = mantissa.substring(dot + 1);
+
+            // Defensive trailing zero truncation to guarantee ECMAScript compliance
+            // regardless of underlying JVM formatter drift.
+            int len = fractionDigits.length();
+            while (len > 0 && fractionDigits.charAt(len - 1) == '0') {
+                len--;
+            }
+            if (len != fractionDigits.length()) {
+                fractionDigits = fractionDigits.substring(0, len);
+            }
         }
-        return PLAIN_FORMAT.format(number.doubleValue());
+
+        int exponent = Integer.parseInt(javaString.substring(eIndex + 1));
+
+        if (exponent >= 21 || exponent <= -7) {
+            StringBuilder sb = new StringBuilder(32);
+            if (isNegative)
+                sb.append('-');
+            sb.append(firstDigit);
+            if (!fractionDigits.isEmpty()) {
+                sb.append('.').append(fractionDigits);
+            }
+            sb.append('e');
+            if (exponent > 0) {
+                sb.append('+');
+            }
+            sb.append(exponent);
+            return sb.toString();
+        }
+
+        // Plain expansion for ES6 overlapping limits (-6 <= exponent <= 20)
+        StringBuilder sb = new StringBuilder(64);
+        if (isNegative)
+            sb.append('-');
+
+        if (exponent == 0) {
+            sb.append(firstDigit);
+            if (!fractionDigits.isEmpty()) {
+                sb.append('.').append(fractionDigits);
+            }
+        } else if (exponent > 0) {
+            sb.append(firstDigit);
+            if (exponent >= fractionDigits.length()) {
+                sb.append(fractionDigits);
+                int remainingZeros = exponent - fractionDigits.length();
+                for (int i = 0; i < remainingZeros; i++) {
+                    sb.append('0');
+                }
+            } else {
+                sb.append(fractionDigits, 0, exponent);
+                sb.append('.');
+                sb.append(fractionDigits, exponent, fractionDigits.length());
+            }
+        } else {
+            sb.append("0.");
+            int leadingZeros = (-exponent) - 1;
+            for (int i = 0; i < leadingZeros; i++) {
+                sb.append('0');
+            }
+            sb.append(firstDigit);
+            sb.append(fractionDigits);
+        }
+
+        return sb.toString();
     }
 
     /**
@@ -311,42 +292,36 @@ public final class Jcs {
      *
      * @param value the string to escape
      * @return the escaped string
+     * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
+     *                                  detected
      */
     static String escape(String value) {
         final StringBuilder escaped = new StringBuilder();
-        int[] codePoints = value.codePoints().toArray();
+        final HexFormat hexFormat = HexFormat.of();
+        final int length = value.length();
 
-        for (int ch : codePoints) {
+        for (int i = 0; i < length;) {
+            int ch = value.codePointAt(i);
             switch (ch) {
-            case '\t':
-                escaped.append("\\t");
-                break;
-            case '\b':
-                escaped.append("\\b");
-                break;
-            case '\n':
-                escaped.append("\\n");
-                break;
-            case '\r':
-                escaped.append("\\r");
-                break;
-            case '\f':
-                escaped.append("\\f");
-                break;
-            case '\"':
-                escaped.append("\\\"");
-                break;
-            case '\\':
-                escaped.append("\\\\");
-                break;
-            default:
-                if (ch >= 0x00 && ch <= 0x1F) {
-                    escaped.append(String.format("\\u%04x", ch));
+            case '\t' -> escaped.append("\\t");
+            case '\b' -> escaped.append("\\b");
+            case '\n' -> escaped.append("\\n");
+            case '\r' -> escaped.append("\\r");
+            case '\f' -> escaped.append("\\f");
+            case '\"' -> escaped.append("\\\"");
+            case '\\' -> escaped.append("\\\\");
+            default -> {
+                if (ch <= 0x1F) {
+                    escaped.append("\\u").append(hexFormat.toHexDigits((char) ch));
+                } else if (ch >= 0xD800 && ch <= 0xDFFF) {
+                    throw new IllegalArgumentException(
+                            "RFC 8785 Compliance Error: Invalid Unicode data (lone surrogate) detected at index " + i);
                 } else {
                     escaped.appendCodePoint(ch);
                 }
-                break;
             }
+            }
+            i += Character.charCount(ch);
         }
         return escaped.toString();
     }

@@ -22,29 +22,33 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 
 ## ✨ Features
 
-- **Non-recursive Canonical JSON Writer**  
-  Deterministically serializes JSON values into a stable, repeatable form 
+- **Non-recursive Canonical JCS Writer**  
+  Deterministically serializes values into a stable, repeatable form 
   following [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785).  
 
-- **Canonical JSON Equality Comparator**  
-  Compares JSON values for equality under JCS rules, ensuring numbers, objects, 
+- **Canonical JCS Equality Comparator**  
+  Compares values for equality under JCS rules, ensuring numbers, objects, 
   and arrays are compared in their canonical form rather than raw text.
   
 - **Uniform, JSON Library-Agnostic API**  
   Built on a uniform [Tree I/O API](https://github.com/filip26/tree-io) for JSON data processing.  
   Jackson and Jakarta are supported out of the box.
+  
 
 ## Example
 
 ```javascript
-// Canonicalize a JSON value and return the canonical string
-var canonicalJson = Jcs.canonize(json, adapter);
+// Read with tree-io-jackson2 adapter
+var value = 
 
-// Canonicalize a JSON value and write canonical JSON to a writer
-Jcs.canonize(json, adapter, writer);
+// Canonicalize a value and return the canonical string
+var canonicalJson = Jcs.canonize(value);
 
-// Compare two JSON values for canonical equality
-if (Jcs.equals(json1, json2, adapter)) {
+// Canonicalize a value and write canonical JSON to a writer
+Jcs.canonize(value, writer);
+
+// Compare two values for canonical equality
+if (Jcs.equals(value1, value2)) {
   // values are equal under RFC 8785 rules
 }
 ```
