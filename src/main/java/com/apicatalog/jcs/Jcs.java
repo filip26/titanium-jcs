@@ -203,7 +203,7 @@ public class Jcs {
     }
 
     protected static boolean equals(TreeTraverser<?> node1, TreeTraverser<?> node2) {
-        return Tree.equals(node1, node2, Jcs::scalarEquals);
+        return Tree.identical(node1, node2, Jcs::scalarEquals);
     }
 
     /**

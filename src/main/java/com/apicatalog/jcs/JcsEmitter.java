@@ -212,14 +212,4 @@ public final class JcsEmitter implements TreeEmitter {
             writer.write(',');
         }
     }
-
-//    @Override
-//    public void flush() throws IOException {
-//        writer.flush();
-//    }
-//
-//    @Override
-//    public void close() throws IOException {
-//        writer.close();
-//    }
 }
