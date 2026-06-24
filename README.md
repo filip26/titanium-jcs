@@ -38,18 +38,23 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 ## Example
 
 ```javascript
-// Read with tree-io-jackson2 adapter
-var value = 
 
-// Canonicalize a value and return the canonical string
-var canonicalJson = Jcs.canonize(value);
+var value = List.of(
+    333333333.33333329,
+    1E30,
+    0.00000001);
 
-// Canonicalize a value and write canonical JSON to a writer
+// Canonicalize a value and return its canonical JSON string
+var result = Jcs.canonize(value);
+
+// result = "[333333333.3333333,1e+30,1e-8]"
+
+// Or canonicalize a value and write the canonical JSON to a writer
 Jcs.canonize(value, writer);
 
 // Compare two values for canonical equality
 if (Jcs.equals(value1, value2)) {
-  // values are equal under RFC 8785 rules
+    // Values are equal under RFC 8785 rules
 }
 ```
 

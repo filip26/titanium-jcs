@@ -1,27 +1,26 @@
 /**
- * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">RFC
- * 8785 JSON Canonicalization Scheme (JCS)</a>.
+ * RFC 8785 JSON Canonicalization Scheme (JCS) operations for converting object
+ * structures (maps, collections, scalars) into deterministic byte sequences.
  *
- * <p>
- * This package provides a complete API to serialize JSON into a deterministic
- * format, ensuring that any given JSON data structure always produces the exact
- * same byte sequence. This is essential for applications requiring stable JSON
- * representations, such as digital signatures, content addressing, and data
- * integrity checks.
- * </p>
- *
- * <p>
- * The main entry point is the {@link com.apicatalog.jcs.Jcs} class, which
- * provides static methods for:
- * </p>
- *
+ * <h3>Core Components</h3>
  * <ul>
- * <li><b>Canonicalization:</b> Converting a JSON object into its canonical
- * string form via the {@code canonize()} methods.</li>
- * <li><b>Equality:</b> Comparing two JSON objects for canonical equality using
- * the {@code equals()} method.</li>
+ * <li>{@link com.apicatalog.jcs.Jcs} - Static methods for immediate
+ * canonicalization and deep canonical comparison.</li>
+ * <li>{@link com.apicatalog.jcs.JcsEmitter} - Streaming support for sequential
+ * output generation.</li>
  * </ul>
  *
+ * <h3>Examples</h3>
+ * 
+ * <pre>{@code
+ * // Canonicalize an object to a string representation
+ * String canonicalJson = Jcs.canonize(dataObject);
+ *
+ * // Evaluate two distinct structures for canonical equivalence
+ * boolean matches = Jcs.equals(dataObject1, dataObject2);
+ * }</pre>
+ *
  * @see com.apicatalog.jcs.Jcs
+ * @see com.apicatalog.jcs.JcsEmitter
  */
 package com.apicatalog.jcs;

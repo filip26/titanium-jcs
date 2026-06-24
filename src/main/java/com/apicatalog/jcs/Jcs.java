@@ -19,12 +19,10 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.HexFormat;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import com.apicatalog.tree.io.Tree;
 import com.apicatalog.tree.io.TreeCursor;
-import com.apicatalog.tree.io.TreeIOException;
 import com.apicatalog.tree.io.TreeTraverser;
 import com.apicatalog.tree.io.java.NativeTraverser;
 
@@ -33,35 +31,50 @@ import com.apicatalog.tree.io.java.NativeTraverser;
  * 8785 JSON Canonicalization Scheme (JCS)</a>.
  *
  * <p>
- * This class provides the primary API for canonicalizing JSON structures into a
- * deterministic string representation and for comparing JSON values for
+ * This class provides the primary API for canonicalizing Java object structures
+ * (such as Map, Collection, String, Number, Boolean, or null) into a
+ * deterministic string representation and for comparing Java objects for
  * canonical equality. All methods are static and thread-safe.
  * </p>
  *
  * <p>
- * The implementation is agnostic to the underlying JSON object model by using
- * the {@link com.apicatalog.tree.io.TreeAdapter} interface to interact with
- * JSON structures.
+ * The implementation is completely agnostic by using the
+ * {@link com.apicatalog.tree.io.TreeTraverser} abstraction to interact with
+ * structures.
  * </p>
  *
  * <h2>Usage Examples</h2>
  * 
  * <pre>{@code
- * // Canonicalize a JSON value and get the result as a String
- * String canonicalJson = Jcs.canonize(jsonValue, adapter);
+ * // Canonicalize a Java object and get the result as a String
+ * String canonical = Jcs.canonize(javaObject);
  *
- * // Canonicalize a JSON value and write to a Writer
- * Jcs.canonize(jsonValue, adapter, writer);
+ * // Canonicalize a Java object and write to a Writer
+ * Jcs.canonize(javaObject, writer);
  *
- * // Compare two JSON values for canonical equality
- * boolean areEqual = Jcs.equals(jsonValue1, jsonValue2, adapter);
+ * // Compare two Java objects for canonical equality
+ * boolean areEqual = Jcs.equals(javaObject1, javaObject2);
  * }</pre>
  *
- * @see #canonize(Object, com.apicatalog.tree.io.TreeAdapter)
- * @see #valueEquals(Object, Object, com.apicatalog.tree.io.TreeAdapter)
+ * @see #canonize(Object)
+ * @see #equals(Object, Object)
  */
-public final class Jcs {
+public class Jcs {
 
+    /**
+     * Compares two map entries by their string keys lexicographically.
+     *
+     * <p>
+     * This comparator is used to enforce deterministic sorting of entry keys during
+     * canonicalization processing.
+     * </p>
+     *
+     * @param e1 the first map entry to compare
+     * @param e2 the second map entry to compare
+     * @return a negative integer, zero, or a positive integer as the first entry
+     *         key is less than, equal to, or greater than the second entry key
+     * @throws IllegalArgumentException if either entry key is not a {@link String}
+     */
     public static int entryKeyComparator(Entry<?, ?> e1, Entry<?, ?> e2) {
         if (e1.getKey() instanceof String key1 && e2.getKey() instanceof String key2) {
             return key1.compareTo(key2);
@@ -69,7 +82,24 @@ public final class Jcs {
         throw new IllegalArgumentException();
     }
 
-    public static boolean scalarEquals(TreeCursor cursor1, TreeCursor cursor2) throws TreeIOException {
+    /**
+     * Compares two scalar nodes for canonical equality using agnostic cursors.
+     *
+     * <p>
+     * Two scalar nodes are canonically equal if they represent equivalent scalar
+     * types (null, boolean, string, or number) and their normalized values match
+     * according to JCS rules.
+     * </p>
+     *
+     * @param cursor1 the first agnostic {@link TreeCursor} pointing to a scalar
+     *                node
+     * @param cursor2 the second agnostic {@link TreeCursor} pointing to a scalar
+     *                node
+     * @return {@code true} if the scalar values are canonically equal,
+     *         {@code false} otherwise
+     * @throws IllegalArgumentException if a cursor points to a non-scalar node type
+     */
+    public static boolean scalarEquals(TreeCursor cursor1, TreeCursor cursor2) {
         return switch (cursor1.nodeType()) {
         case NULL, TRUE, FALSE -> true;
 
@@ -82,80 +112,89 @@ public final class Jcs {
     }
 
     /**
-     * Canonicalizes as JSON object according to JCS (RFC 8785) and returns the
-     * result as a {@link String}.
+     * Canonicalizes a Java object (such as Map, Collection, String, Number,
+     * Boolean, or null) according to JCS (RFC 8785) and returns the result as a
+     * {@link String}.
      *
-     * @param value the Map representing JSON object to canonicalize (can be
-     *              {@code null})
-     * @return a string containing the canonical JSON representation
-     * @throws TreeIOException
+     * @param value the Java object to canonicalize (can be {@code null})
+     * @return a string containing the canonical representation
      */
-    public static String canonize(final Object value) throws TreeIOException {
-        var writer = new StringWriter();
-        canonize(value, writer);
-        return writer.toString();
+    public static String canonize(final Object value) {
+        try {
+            var writer = new StringWriter();
+            canonize(value, writer);
+            return writer.toString();
+        } catch (IOException e) {
+            // should not happen for StringWriter()
+            throw new IllegalStateException(e);
+        }
     }
 
     /**
-     * Canonicalizes a JSON value according to JCS (RFC 8785) and writes the output
-     * to the provided {@link Writer}.
+     * Canonicalizes a Java object (such as Map, Collection, String, Number,
+     * Boolean, or null) according to JCS (RFC 8785) and writes the output to the
+     * provided {@link Writer}.
      *
-     * @param value  the JSON value to canonicalize (can be {@code null})
+     * @param value  the Java object to canonicalize (can be {@code null})
      * @param writer the {@link Writer} to which the canonical output is written
-     * @throws TreeIOException
+     * @throws IOException if an error occurs during canonicalization processing or
+     *                     writing
      */
-    public static void canonize(final Object value, Writer writer) throws TreeIOException {
+    public static void canonize(final Object value, Writer writer) throws IOException {
         canonize(new NativeTraverser(value, Jcs::entryKeyComparator), writer);
     }
 
     /**
-     * Canonicalizes a JSON value according to JCS (RFC 8785) and returns the result
-     * as a {@link String}.
+     * Canonicalizes structure agnostic traversal according to JCS (RFC 8785) and
+     * returns the result as a {@link String}. The {@link TreeTraverser} must have
+     * set {@link TreeTraverser#comparator(java.util.Comparator)} to
+     * {@link #entryKeyComparator(Entry, Entry)} equivalent.
      *
-     * @param value the JSON value to canonicalize (can be {@code null})
-     * @return a string containing the canonical JSON representation
-     * @throws TreeIOException
+     * @param traverser the agnostic {@link TreeTraverser} to canonicalize
+     * @return a string containing the canonical representation
      */
-    protected static String canonize(TreeTraverser<?> traverser) throws TreeIOException {
-        final var writer = new StringWriter();
-        canonize(traverser, writer);
-        return writer.toString();
+    protected static String canonize(TreeTraverser<?> traverser) {
+        try {
+            final var writer = new StringWriter();
+            canonize(traverser, writer);
+            return writer.toString();
+        } catch (IOException e) {
+            // should not happen for StringWriter()
+            throw new IllegalStateException(e);
+        }
     }
 
     /**
-     * Canonicalizes {@link Map} representing JSON object according to JCS (RFC
-     * 8785) and writes the output to the provided {@link Writer}.
+     * Canonicalizes structure agnostic traversal according to JCS (RFC 8785) and
+     * writes the output to the provided {@link Writer}. The {@link TreeTraverser}
+     * must have set {@link TreeTraverser#comparator(java.util.Comparator)} to
+     * {@link #entryKeyComparator(Entry, Entry)} equivalent.
      *
-     * @param value  the {@link Map} representing JSON object to canonicalize (can
-     *               be {@code null})
-     * @param writer the {@link Writer} to which the canonical output is written
-     * @throws IOException     if an I/O error occurs
-     * @throws TreeIOException
+     * @param traverser the agnostic {@link TreeTraverser} to canonicalize
+     * @param writer    the {@link Writer} to which the canonical output is written
+     * @throws IOException if an error occurs during canonicalization processing or
+     *                     writing
      */
-    protected static void canonize(TreeTraverser<?> traverser, Writer writer) throws TreeIOException {
+    protected static void canonize(TreeTraverser<?> traverser, Writer writer) throws IOException {
         Tree.write(traverser, new JcsEmitter(writer));
     }
 
     /**
-     * Compares two {@link Map} representing JSON objects for canonical equality
-     * under JCS (RFC 8785).
+     * Compares two Java objects (such as Map, Collection, String, Number, Boolean,
+     * or null) for canonical equality under JCS (RFC 8785).
      *
      * <p>
-     * Two JSON values are canonically equal if their data models are equivalent.
+     * Two Java objects are canonically equal if their data models are equivalent.
      * This involves comparing numbers by their canonical string representation and
-     * objects by their members, sorted lexicographically by key.
+     * objects/maps by their members, sorted lexicographically by key.
      * </p>
      *
-     * @param value1 the first {@link Map} representing JSON object to compare (can
-     *               be {@code null})
-     * @param value2 the second {@link Map} representing JSON object to compare (can
-     *               be {@code null})
+     * @param value1 the first Java object to compare (can be {@code null})
+     * @param value2 the second Java object to compare (can be {@code null})
      * @return {@code true} if the values are canonically equal, {@code false}
      *         otherwise
-     * @throws TreeIOException
      */
-//    public static boolean equals(final Map<String, Object> value1, final Map<String, Object> value2) throws TreeIOException {
-    public static boolean equals(final Object value1, final Object value2) throws TreeIOException {
+    public static boolean equals(final Object value1, final Object value2) {
 
         var cursor1 = new NativeTraverser(value1, Jcs::entryKeyComparator);
         var cursor2 = new NativeTraverser(value2, Jcs::entryKeyComparator);
@@ -163,12 +202,12 @@ public final class Jcs {
         return equals(cursor1, cursor2);
     }
 
-    protected static boolean equals(TreeTraverser<?> node1, TreeTraverser<?> node2) throws TreeIOException {
+    protected static boolean equals(TreeTraverser<?> node1, TreeTraverser<?> node2) {
         return Tree.equals(node1, node2, Jcs::scalarEquals);
     }
 
     /**
-     * Canonicalizes a JSON number according to JCS (RFC 8785).
+     * Canonicalizes as JSON number according to JCS (RFC 8785).
      *
      * Numbers are strictly restricted to IEEE 754 double-precision format.
      * Serialization matches ECMAScript Number.prototype.toString() rules exactly.
@@ -177,7 +216,7 @@ public final class Jcs {
      * @return the canonical string representation of the number
      * @throws IllegalArgumentException if the number overflows IEEE limits
      */
-    static String canonizeNumber(final Number number) {
+    public static String canonizeNumber(final Number number) {
         // JCS assumes inputs are already parsed as IEEE-754 doubles.
         // Conversion natively applies standard IEEE rounding to arbitrary precision
         // inputs.
@@ -295,7 +334,7 @@ public final class Jcs {
      * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
      *                                  detected
      */
-    static String escape(String value) {
+    public static String escape(String value) {
         final StringBuilder escaped = new StringBuilder();
         final HexFormat hexFormat = HexFormat.of();
         final int length = value.length();
