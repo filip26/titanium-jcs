@@ -16,9 +16,10 @@
 package com.apicatalog.jcs;
 
 import java.io.IOException;
-import java.io.Writer;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 
 import com.apicatalog.tree.io.Tree.NodeContext;
 import com.apicatalog.tree.io.TreeEmitter;
@@ -31,14 +32,18 @@ import com.apicatalog.tree.io.TreeEmitter;
  */
 public final class JcsEmitter implements TreeEmitter {
 
-    private final Writer writer;
+    private static byte[] NULL = "null".getBytes(StandardCharsets.UTF_8);
+    private static byte[] TRUE = "true".getBytes(StandardCharsets.UTF_8);
+    private static byte[] FALSE = "false".getBytes(StandardCharsets.UTF_8);
+
+    private final OutputStream writer;
 
     /**
      * Creates a new instance.
      *
      * @param writer The writer to which the canonical output is written.
      */
-    public JcsEmitter(Writer writer) {
+    public JcsEmitter(OutputStream writer) {
         super();
         this.writer = writer;
     }
@@ -47,7 +52,7 @@ public final class JcsEmitter implements TreeEmitter {
      * Writes the beginning of a map structure.
      *
      * @param context the current node context
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
      */
     @Override
     public void beginMap(NodeContext context) throws IOException {
@@ -58,7 +63,7 @@ public final class JcsEmitter implements TreeEmitter {
      * Writes the end of a map structure.
      *
      * @param context the current node context
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
      */
     @Override
     public void endMap(NodeContext context) throws IOException {
@@ -70,7 +75,7 @@ public final class JcsEmitter implements TreeEmitter {
      * Writes the beginning of a collection structure.
      *
      * @param context the current node context
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
      */
     @Override
     public void beginSequence(NodeContext context) throws IOException {
@@ -97,7 +102,7 @@ public final class JcsEmitter implements TreeEmitter {
      */
     @Override
     public void nullValue(NodeContext context) throws IOException {
-        writer.write("null");
+        writer.write(NULL);
         next(context);
     }
 
@@ -110,7 +115,7 @@ public final class JcsEmitter implements TreeEmitter {
      */
     @Override
     public void booleanValue(NodeContext context, boolean node) throws IOException {
-        writer.write(node ? "true" : "false");
+        writer.write(node ? TRUE : FALSE);
         next(context);
     }
 
@@ -205,7 +210,7 @@ public final class JcsEmitter implements TreeEmitter {
      * Appends structural delimiters if dictated by the structural position context.
      *
      * @param context the current node context
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
      */
     private void next(NodeContext context) throws IOException {
         if (context == NodeContext.ELEMENT || context == NodeContext.ENTRY_VALUE) {

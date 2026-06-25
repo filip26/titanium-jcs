@@ -15,9 +15,11 @@
  */
 package com.apicatalog.jcs;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.Map.Entry;
 
@@ -103,9 +105,9 @@ public class Jcs {
         return switch (cursor1.nodeType()) {
         case NULL, TRUE, FALSE -> true;
 
-        case STRING -> escape(cursor1.stringValue()).equals(escape(cursor2.stringValue()));
+        case STRING -> Arrays.equals(escape(cursor1.stringValue()), escape(cursor2.stringValue()));
 
-        case NUMBER -> canonizeNumber(cursor1.numberValue()).equals(canonizeNumber(cursor2.numberValue()));
+        case NUMBER -> Arrays.equals(canonizeNumber(cursor1.numberValue()), canonizeNumber(cursor2.numberValue()));
 
         default -> throw new IllegalArgumentException("Expected scalar node but got " + cursor1.nodeType());
         };
@@ -117,13 +119,14 @@ public class Jcs {
      * {@link String}.
      *
      * @param value the Java object to canonicalize (can be {@code null})
-     * @return a string containing the canonical representation
+     * @return byte array containing the canonical representation
      */
-    public static String canonize(final Object value) {
+    public static byte[] canonize(final Object value) {
         try {
-            var writer = new StringWriter();
-            canonize(value, writer);
-            return writer.toString();
+            var bos = new ByteArrayOutputStream();
+            canonize(value, bos);
+            return bos.toByteArray();
+
         } catch (IOException e) {
             // should not happen for StringWriter()
             throw new IllegalStateException(e);
@@ -133,15 +136,16 @@ public class Jcs {
     /**
      * Canonicalizes a Java object (such as Map, Collection, String, Number,
      * Boolean, or null) according to JCS (RFC 8785) and writes the output to the
-     * provided {@link Writer}.
+     * provided {@link OutputStream}.
      *
-     * @param value  the Java object to canonicalize (can be {@code null})
-     * @param writer the {@link Writer} to which the canonical output is written
+     * @param value the Java object to canonicalize (can be {@code null})
+     * @param os    the {@link OutputStream} to which the canonical output is
+     *              written
      * @throws IOException if an error occurs during canonicalization processing or
      *                     writing
      */
-    public static void canonize(final Object value, Writer writer) throws IOException {
-        canonize(new NativeTraverser(value, Jcs::entryKeyComparator), writer);
+    public static void canonize(final Object value, OutputStream os) throws IOException {
+        canonize(new NativeTraverser(value, Jcs::entryKeyComparator), os);
     }
 
     /**
@@ -151,13 +155,13 @@ public class Jcs {
      * {@link #entryKeyComparator(Entry, Entry)} equivalent.
      *
      * @param traverser the agnostic {@link TreeTraverser} to canonicalize
-     * @return a string containing the canonical representation
+     * @return byte array containing the canonical representation
      */
-    protected static String canonize(TreeTraverser<?> traverser) {
+    protected static byte[] canonize(TreeTraverser<?> traverser) {
         try {
-            final var writer = new StringWriter();
-            canonize(traverser, writer);
-            return writer.toString();
+            var bos = new ByteArrayOutputStream();
+            canonize(traverser, bos);
+            return bos.toByteArray();
         } catch (IOException e) {
             // should not happen for StringWriter()
             throw new IllegalStateException(e);
@@ -166,17 +170,19 @@ public class Jcs {
 
     /**
      * Canonicalizes structure agnostic traversal according to JCS (RFC 8785) and
-     * writes the output to the provided {@link Writer}. The {@link TreeTraverser}
-     * must have set {@link TreeTraverser#comparator(java.util.Comparator)} to
+     * writes the output to the provided {@link OutputStream}. The
+     * {@link TreeTraverser} must have set
+     * {@link TreeTraverser#comparator(java.util.Comparator)} to
      * {@link #entryKeyComparator(Entry, Entry)} equivalent.
      *
      * @param traverser the agnostic {@link TreeTraverser} to canonicalize
-     * @param writer    the {@link Writer} to which the canonical output is written
+     * @param os        the {@link OutputStream} to which the canonical output is
+     *                  written
      * @throws IOException if an error occurs during canonicalization processing or
      *                     writing
      */
-    protected static void canonize(TreeTraverser<?> traverser, Writer writer) throws IOException {
-        Tree.write(traverser, new JcsEmitter(writer));
+    protected static void canonize(TreeTraverser<?> traverser, OutputStream os) throws IOException {
+        Tree.write(traverser, new JcsEmitter(os));
     }
 
     /**
@@ -213,13 +219,10 @@ public class Jcs {
      * Serialization matches ECMAScript Number.prototype.toString() rules exactly.
      *
      * @param number the BigDecimal to canonicalize
-     * @return the canonical string representation of the number
+     * @return the canonical byte array representation of the number
      * @throws IllegalArgumentException if the number overflows IEEE limits
      */
-    public static String canonizeNumber(final Number number) {
-        // JCS assumes inputs are already parsed as IEEE-754 doubles.
-        // Conversion natively applies standard IEEE rounding to arbitrary precision
-        // inputs.
+    public static byte[] canonizeNumber(final Number number) {
         double d = number.doubleValue();
 
         if (Double.isInfinite(d) || Double.isNaN(d)) {
@@ -227,141 +230,226 @@ public class Jcs {
         }
 
         if (d == 0.0) {
-            return "0";
+            return new byte[] { '0' };
         }
 
-        // Java 21 Double.toString() (almost always) uses Ryu and produces the shortest
-        // round-trip IEEE-754 representation, which matches ECMAScript
-        // Number serialization for all finite doubles.
-        String javaString = Double.toString(d);
+        var string = Double.toString(d);
 
-        boolean isNegative = d < 0.0;
-        int start = isNegative ? 1 : 0;
+        var isNegative = d < 0.0;
+        var start = isNegative ? 1 : 0;
 
-        int eIndex = javaString.indexOf('E', start);
+        var eIndex = string.indexOf('E', start);
         if (eIndex == -1) {
-            // Truncate Java's forced ".0" for integers to match ECMAScript
-            if (javaString.endsWith(".0")) {
-                String res = javaString.substring(start, javaString.length() - 2);
-                return isNegative ? "-" + res : res;
+            if (string.endsWith(".0")) {
+                int length = string.length() - 2;
+                byte[] res = new byte[length];
+                for (int i = 0; i < length; i++) {
+                    res[i] = (byte) string.charAt(i);
+                }
+                return res;
             }
-            return javaString;
+            return string.getBytes(StandardCharsets.UTF_8);
         }
 
-        String mantissa = javaString.substring(start, eIndex);
-        int dot = mantissa.indexOf('.');
+        int dot = string.indexOf('.', start);
+        char firstDigit = string.charAt(start);
 
-        char firstDigit;
-        String fractionDigits;
-
-        if (dot < 0) {
-            firstDigit = mantissa.charAt(0);
-            fractionDigits = mantissa.length() > 1 ? mantissa.substring(1) : "";
-        } else {
-            firstDigit = mantissa.charAt(0);
-            fractionDigits = mantissa.substring(dot + 1);
-
-            // Defensive trailing zero truncation to guarantee ECMAScript compliance
-            // regardless of underlying JVM formatter drift.
-            int len = fractionDigits.length();
-            while (len > 0 && fractionDigits.charAt(len - 1) == '0') {
-                len--;
-            }
-            if (len != fractionDigits.length()) {
-                fractionDigits = fractionDigits.substring(0, len);
-            }
+        int fracStart = (dot < 0) ? start + 1 : dot + 1;
+        int fracEnd = eIndex;
+        while (fracEnd > fracStart && string.charAt(fracEnd - 1) == '0') {
+            fracEnd--;
         }
+        int fracLen = fracEnd - fracStart;
 
-        int exponent = Integer.parseInt(javaString.substring(eIndex + 1));
+        int exponent = Integer.parseInt(string, eIndex + 1, string.length(), 10);
+
+        byte[] buf = new byte[128];
+        int pos = 0;
+
+        if (isNegative) {
+            buf[pos++] = '-';
+        }
 
         if (exponent >= 21 || exponent <= -7) {
-            StringBuilder sb = new StringBuilder(32);
-            if (isNegative)
-                sb.append('-');
-            sb.append(firstDigit);
-            if (!fractionDigits.isEmpty()) {
-                sb.append('.').append(fractionDigits);
+            buf[pos++] = (byte) firstDigit;
+            if (fracLen > 0) {
+                buf[pos++] = '.';
+                for (int i = fracStart; i < fracEnd; i++) {
+                    buf[pos++] = (byte) string.charAt(i);
+                }
             }
-            sb.append('e');
+            buf[pos++] = 'e';
             if (exponent > 0) {
-                sb.append('+');
+                buf[pos++] = '+';
             }
-            sb.append(exponent);
-            return sb.toString();
+            String expStr = Integer.toString(exponent);
+            for (int i = 0; i < expStr.length(); i++) {
+                buf[pos++] = (byte) expStr.charAt(i);
+            }
+            return Arrays.copyOf(buf, pos);
         }
-
-        // Plain expansion for ES6 overlapping limits (-6 <= exponent <= 20)
-        StringBuilder sb = new StringBuilder(64);
-        if (isNegative)
-            sb.append('-');
 
         if (exponent == 0) {
-            sb.append(firstDigit);
-            if (!fractionDigits.isEmpty()) {
-                sb.append('.').append(fractionDigits);
+            buf[pos++] = (byte) firstDigit;
+            if (fracLen > 0) {
+                buf[pos++] = '.';
+                for (int i = fracStart; i < fracEnd; i++) {
+                    buf[pos++] = (byte) string.charAt(i);
+                }
             }
         } else if (exponent > 0) {
-            sb.append(firstDigit);
-            if (exponent >= fractionDigits.length()) {
-                sb.append(fractionDigits);
-                int remainingZeros = exponent - fractionDigits.length();
+            buf[pos++] = (byte) firstDigit;
+            if (exponent >= fracLen) {
+                for (int i = fracStart; i < fracEnd; i++) {
+                    buf[pos++] = (byte) string.charAt(i);
+                }
+                int remainingZeros = exponent - fracLen;
                 for (int i = 0; i < remainingZeros; i++) {
-                    sb.append('0');
+                    buf[pos++] = '0';
                 }
             } else {
-                sb.append(fractionDigits, 0, exponent);
-                sb.append('.');
-                sb.append(fractionDigits, exponent, fractionDigits.length());
+                for (int i = 0; i < exponent; i++) {
+                    buf[pos++] = (byte) string.charAt(fracStart + i);
+                }
+                buf[pos++] = '.';
+                for (int i = exponent; i < fracLen; i++) {
+                    buf[pos++] = (byte) string.charAt(fracStart + i);
+                }
             }
         } else {
-            sb.append("0.");
+            buf[pos++] = '0';
+            buf[pos++] = '.';
             int leadingZeros = (-exponent) - 1;
             for (int i = 0; i < leadingZeros; i++) {
-                sb.append('0');
+                buf[pos++] = '0';
             }
-            sb.append(firstDigit);
-            sb.append(fractionDigits);
+            buf[pos++] = (byte) firstDigit;
+            for (int i = fracStart; i < fracEnd; i++) {
+                buf[pos++] = (byte) string.charAt(i);
+            }
         }
 
-        return sb.toString();
+        return Arrays.copyOf(buf, pos);
     }
 
     /**
-     * Escapes a string according to JCS (RFC 8785, Section 2.5) rules.
+     * Escapes a string according to JCS (RFC 8785, Section 2.5) rules and encodes
+     * the result directly to a UTF-8 byte array.
      *
      * @param value the string to escape
-     * @return the escaped string
+     * @return the escaped UTF-8 byte array
      * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
      *                                  detected
      */
-    public static String escape(String value) {
-        final StringBuilder escaped = new StringBuilder();
-        final HexFormat hexFormat = HexFormat.of();
+    static byte[] escape(String value) {
         final int length = value.length();
+        final ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(length, 16));
+        final HexFormat hexFormat = HexFormat.of();
 
         for (int i = 0; i < length;) {
             int ch = value.codePointAt(i);
             switch (ch) {
-            case '\t' -> escaped.append("\\t");
-            case '\b' -> escaped.append("\\b");
-            case '\n' -> escaped.append("\\n");
-            case '\r' -> escaped.append("\\r");
-            case '\f' -> escaped.append("\\f");
-            case '\"' -> escaped.append("\\\"");
-            case '\\' -> escaped.append("\\\\");
+            case '\t' -> {
+                out.write('\\');
+                out.write('t');
+            }
+            case '\b' -> {
+                out.write('\\');
+                out.write('b');
+            }
+            case '\n' -> {
+                out.write('\\');
+                out.write('n');
+            }
+            case '\r' -> {
+                out.write('\\');
+                out.write('r');
+            }
+            case '\f' -> {
+                out.write('\\');
+                out.write('f');
+            }
+            case '\"' -> {
+                out.write('\\');
+                out.write('"');
+            }
+            case '\\' -> {
+                out.write('\\');
+                out.write('\\');
+            }
             default -> {
                 if (ch <= 0x1F) {
-                    escaped.append("\\u").append(hexFormat.toHexDigits((char) ch));
+                    out.write('\\');
+                    out.write('u');
+                    out.write('0');
+                    out.write('0');
+                    out.write(hexFormat.toHighHexDigit((byte) ch));
+                    out.write(hexFormat.toLowHexDigit((byte) ch));
+
                 } else if (ch >= 0xD800 && ch <= 0xDFFF) {
                     throw new IllegalArgumentException(
                             "RFC 8785 Compliance Error: Invalid Unicode data (lone surrogate) detected at index " + i);
+                } else if (ch <= 0x7F) {
+                    out.write(ch);
+
+                } else if (ch <= 0x7FF) {
+                    out.write(0xC0 | (ch >> 6));
+                    out.write(0x80 | (ch & 0x3F));
+
+                } else if (ch <= 0xFFFF) {
+                    out.write(0xE0 | (ch >> 12));
+                    out.write(0x80 | ((ch >> 6) & 0x3F));
+                    out.write(0x80 | (ch & 0x3F));
+
                 } else {
-                    escaped.appendCodePoint(ch);
+                    out.write(0xF0 | (ch >> 18));
+                    out.write(0x80 | ((ch >> 12) & 0x3F));
+                    out.write(0x80 | ((ch >> 6) & 0x3F));
+                    out.write(0x80 | (ch & 0x3F));
                 }
             }
             }
             i += Character.charCount(ch);
         }
-        return escaped.toString();
+        return out.toByteArray();
     }
+
+//    /**
+//     * Escapes a string according to JCS (RFC 8785, Section 2.5) rules.
+//     *
+//     * @param value the string to escape
+//     * @return the escaped string
+//     * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
+//     *                                  detected
+//     */
+//    public static String escape(String value) {
+//        final StringBuilder escaped = new StringBuilder();
+//        final HexFormat hexFormat = HexFormat.of();
+//        final int length = value.length();
+//
+//        for (int i = 0; i < length;) {
+//            int ch = value.codePointAt(i);
+//            switch (ch) {
+//            case '\t' -> escaped.append("\\t");
+//            case '\b' -> escaped.append("\\b");
+//            case '\n' -> escaped.append("\\n");
+//            case '\r' -> escaped.append("\\r");
+//            case '\f' -> escaped.append("\\f");
+//            case '\"' -> escaped.append("\\\"");
+//            case '\\' -> escaped.append("\\\\");
+//            default -> {
+//                if (ch <= 0x1F) {
+//                    escaped.append("\\u").append(hexFormat.toHexDigits((char) ch));
+//                } else if (ch >= 0xD800 && ch <= 0xDFFF) {
+//                    throw new IllegalArgumentException(
+//                            "RFC 8785 Compliance Error: Invalid Unicode data (lone surrogate) detected at index " + i);
+//                } else {
+//                    escaped.appendCodePoint(ch);
+//                }
+//            }
+//            }
+//            i += Character.charCount(ch);
+//        }
+//        return escaped.toString();
+//    }
 }

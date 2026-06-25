@@ -1,5 +1,6 @@
 package com.apicatalog.jcs;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -32,16 +33,16 @@ class JcsTest {
     @ParameterizedTest
     @MethodSource({ "resources" })
     void testCanonizeJakarta(String name) throws IOException {
-        assertEquals(
-                getResource(name + ".out.json"),
+        assertArrayEquals(
+                getBytes(name + ".out.json"),
                 Jcs.canonize(getJakartaJson(name + ".in.json")));
     }
 
     @ParameterizedTest
     @MethodSource({ "resources" })
     void testCanonizeJackson2(String name) throws IOException {
-        assertEquals(
-                getResource(name + ".out.json"),
+        assertArrayEquals(
+                getBytes(name + ".out.json"),
                 Jcs.canonize(getJacksonJson(name + ".in.json")));
     }
 
@@ -69,12 +70,12 @@ class JcsTest {
                 .map(name -> name.substring(0, name.length() - ".in.json".length()));
     }
 
-    static String getResource(String name) throws IOException {
+    static byte[] getBytes(String name) throws IOException {
         try (var is = new BufferedInputStream(JcsTest.class.getResourceAsStream(name))) {
             return new BufferedReader(
                     new InputStreamReader(is, StandardCharsets.UTF_8))
                     .lines()
-                    .collect(Collectors.joining("\n"));
+                    .collect(Collectors.joining("\n")).getBytes();
         }
     }
 
