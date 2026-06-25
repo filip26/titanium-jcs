@@ -17,6 +17,7 @@ package com.apicatalog.jcs;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -52,58 +53,73 @@ public final class JcsEmitter implements TreeEmitter {
      * Writes the beginning of a map structure.
      *
      * @param context the current node context
-     * @throws IOException
      */
     @Override
-    public void beginMap(NodeContext context) throws IOException {
-        writer.write('{');
+    public void beginMap(NodeContext context) {
+        try {
+            writer.write('{');
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
      * Writes the end of a map structure.
      *
      * @param context the current node context
-     * @throws IOException
      */
     @Override
-    public void endMap(NodeContext context) throws IOException {
-        writer.write('}');
-        next(context);
+    public void endMap(NodeContext context) {
+        try {
+            writer.write('}');
+            next(context);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
      * Writes the beginning of a collection structure.
      *
      * @param context the current node context
-     * @throws IOException
      */
     @Override
-    public void beginSequence(NodeContext context) throws IOException {
-        writer.write('[');
+    public void beginSequence(NodeContext context) {
+        try {
+            writer.write('[');
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
      * Writes the end of a collection structure.
      *
      * @param context the current node context
-     * @throws IOException if an I/O error occurs.
      */
     @Override
-    public void endSequence(NodeContext context) throws IOException {
-        writer.write(']');
-        next(context);
+    public void endSequence(NodeContext context) {
+        try {
+            writer.write(']');
+            next(context);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
      * Writes a null value literal.
      *
      * @param context the current node context
-     * @throws IOException if an I/O error occurs.
      */
     @Override
-    public void nullValue(NodeContext context) throws IOException {
-        writer.write(NULL);
-        next(context);
+    public void nullValue(NodeContext context) {
+        try {
+            writer.write(NULL);
+            next(context);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
@@ -111,12 +127,15 @@ public final class JcsEmitter implements TreeEmitter {
      *
      * @param context the current node context
      * @param node    the boolean value to write
-     * @throws IOException if an I/O error occurs.
      */
     @Override
-    public void booleanValue(NodeContext context, boolean node) throws IOException {
-        writer.write(node ? TRUE : FALSE);
-        next(context);
+    public void booleanValue(NodeContext context, boolean node) {
+        try {
+            writer.write(node ? TRUE : FALSE);
+            next(context);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
@@ -124,17 +143,20 @@ public final class JcsEmitter implements TreeEmitter {
      *
      * @param context the current node context
      * @param node    the string value to write
-     * @throws IOException if an I/O error occurs.
      */
     @Override
-    public void stringValue(NodeContext context, String node) throws IOException {
-        writer.write('"');
-        writer.write(Jcs.escape(node));
-        writer.write('"');
-        if (context == NodeContext.ENTRY_KEY) {
-            writer.write(':');
-        } else if (context == NodeContext.ELEMENT || context == NodeContext.ENTRY_VALUE) {
-            writer.write(',');
+    public void stringValue(NodeContext context, String node) {
+        try {
+            writer.write('"');
+            writer.write(Jcs.escape(node));
+            writer.write('"');
+            if (context == NodeContext.ENTRY_KEY) {
+                writer.write(':');
+            } else if (context == NodeContext.ELEMENT || context == NodeContext.ENTRY_VALUE) {
+                writer.write(',');
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -143,13 +165,15 @@ public final class JcsEmitter implements TreeEmitter {
      *
      * @param context the current node context
      * @param node    the long value to write
-     * @throws IOException if an error occurs during canonicalization or I/O
-     *                     processing
      */
     @Override
-    public void numericValue(NodeContext context, long node) throws IOException {
-        writer.write(Jcs.canonizeNumber(node));
-        next(context);
+    public void numericValue(NodeContext context, long node) {
+        try {
+            writer.write(Jcs.canonizeNumber(node));
+            next(context);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
@@ -157,13 +181,15 @@ public final class JcsEmitter implements TreeEmitter {
      *
      * @param context the current node context
      * @param node    the BigInteger value to write
-     * @throws IOException if an error occurs during canonicalization or I/O
-     *                     processing
      */
     @Override
-    public void numericValue(NodeContext context, BigInteger node) throws IOException {
-        writer.write(Jcs.canonizeNumber(node));
-        next(context);
+    public void numericValue(NodeContext context, BigInteger node) {
+        try {
+            writer.write(Jcs.canonizeNumber(node));
+            next(context);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
@@ -171,13 +197,15 @@ public final class JcsEmitter implements TreeEmitter {
      *
      * @param context the current node context
      * @param node    the double value to write
-     * @throws IOException if an error occurs during canonicalization or I/O
-     *                     processing
      */
     @Override
-    public void numericValue(NodeContext context, double node) throws IOException {
-        writer.write(Jcs.canonizeNumber(node));
-        next(context);
+    public void numericValue(NodeContext context, double node) {
+        try {
+            writer.write(Jcs.canonizeNumber(node));
+            next(context);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
@@ -186,12 +214,15 @@ public final class JcsEmitter implements TreeEmitter {
      *
      * @param context the current node context
      * @param node    the BigDecimal value to write
-     * @throws IOException if an I/O error occurs.
      */
     @Override
-    public void numericValue(NodeContext context, BigDecimal node) throws IOException {
-        writer.write(Jcs.canonizeNumber(node));
-        next(context);
+    public void numericValue(NodeContext context, BigDecimal node) {
+        try {
+            writer.write(Jcs.canonizeNumber(node));
+            next(context);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /**
