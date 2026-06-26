@@ -67,27 +67,6 @@ if (Jcs.equals(value1, value2)) {
     <artifactId>titanium-jcs</artifactId>
     <version>${titanium-jcs.version}</version>
 </dependency>
-
-<!-- Include at least one Tree I/O JSON adapter -->
-
-<!-- Jackson 2 -->
-<dependency>
-    <groupId>com.apicatalog</groupId>
-    <artifactId>tree-io-jackson2</artifactId>
-    <version>${tree-io.version}</version>
-</dependency>
-
-<!-- Jakarta (JSONP) -->
-<dependency>
-    <groupId>com.apicatalog</groupId>
-    <artifactId>tree-io-jakarta</artifactId>
-    <version>${tree-io.version}</version>
-</dependency>
-<dependency>
-    <groupId>org.glassfish</groupId>
-    <artifactId>jakarta.json</artifactId>
-    <version>2.0.1</version>
-</dependency>
 ```
 
 ## 🛠️ LD-CLI
