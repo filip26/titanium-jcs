@@ -57,6 +57,9 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void beginMap(NodeContext context) {
         try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
             writer.write('{');
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -72,7 +75,6 @@ public final class JcsEmitter implements TreeEmitter {
     public void endMap(NodeContext context) {
         try {
             writer.write('}');
-            next(context);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -86,6 +88,9 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void beginSequence(NodeContext context) {
         try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }            
             writer.write('[');
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -101,7 +106,6 @@ public final class JcsEmitter implements TreeEmitter {
     public void endSequence(NodeContext context) {
         try {
             writer.write(']');
-            next(context);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -115,8 +119,10 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void nullValue(NodeContext context) {
         try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
             writer.write(NULL);
-            next(context);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -131,8 +137,10 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void booleanValue(NodeContext context, boolean node) {
         try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
             writer.write(node ? TRUE : FALSE);
-            next(context);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -147,13 +155,14 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void stringValue(NodeContext context, String node) {
         try {
+            if (context == NodeContext.ENTRY_KEY || context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }            
             writer.write('"');
             writer.write(Jcs.escape(node));
             writer.write('"');
-            if (context == NodeContext.ENTRY_KEY) {
+            if (context == NodeContext.ENTRY_KEY || context == NodeContext.FIRST_ENTRY_KEY) {
                 writer.write(':');
-            } else if (context == NodeContext.ELEMENT || context == NodeContext.ENTRY_VALUE) {
-                writer.write(',');
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -169,8 +178,10 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void numericValue(NodeContext context, long node) {
         try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
             writer.write(Jcs.canonizeNumber(node));
-            next(context);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -185,8 +196,10 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void numericValue(NodeContext context, BigInteger node) {
         try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }            
             writer.write(Jcs.canonizeNumber(node));
-            next(context);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -201,8 +214,10 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void numericValue(NodeContext context, double node) {
         try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
             writer.write(Jcs.canonizeNumber(node));
-            next(context);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -218,8 +233,10 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void numericValue(NodeContext context, BigDecimal node) {
         try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
             writer.write(Jcs.canonizeNumber(node));
-            next(context);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -235,17 +252,5 @@ public final class JcsEmitter implements TreeEmitter {
     @Override
     public void binaryValue(NodeContext context, byte[] node) {
         throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Appends structural delimiters if dictated by the structural position context.
-     *
-     * @param context the current node context
-     * @throws IOException
-     */
-    private void next(NodeContext context) throws IOException {
-        if (context == NodeContext.ELEMENT || context == NodeContext.ENTRY_VALUE) {
-            writer.write(',');
-        }
     }
 }

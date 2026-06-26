@@ -41,9 +41,9 @@ class JcsTest {
     @ParameterizedTest
     @MethodSource({ "resources" })
     void testCanonizeJackson2(String name) throws IOException {
-        assertArrayEquals(
-                getBytes(name + ".out.json"),
-                Jcs.canonize(getJacksonJson(name + ".in.json")));
+        assertEquals(
+                new String(getBytes(name + ".out.json")),
+                new String(Jcs.canonize(getJacksonJson(name + ".in.json"))));
     }
 
     @ParameterizedTest
