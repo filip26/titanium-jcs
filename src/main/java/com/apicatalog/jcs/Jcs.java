@@ -413,43 +413,4 @@ public class Jcs {
         }
         return out.toByteArray();
     }
-
-//    /**
-//     * Escapes a string according to JCS (RFC 8785, Section 2.5) rules.
-//     *
-//     * @param value the string to escape
-//     * @return the escaped string
-//     * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
-//     *                                  detected
-//     */
-//    public static String escape(String value) {
-//        final StringBuilder escaped = new StringBuilder();
-//        final HexFormat hexFormat = HexFormat.of();
-//        final int length = value.length();
-//
-//        for (int i = 0; i < length;) {
-//            int ch = value.codePointAt(i);
-//            switch (ch) {
-//            case '\t' -> escaped.append("\\t");
-//            case '\b' -> escaped.append("\\b");
-//            case '\n' -> escaped.append("\\n");
-//            case '\r' -> escaped.append("\\r");
-//            case '\f' -> escaped.append("\\f");
-//            case '\"' -> escaped.append("\\\"");
-//            case '\\' -> escaped.append("\\\\");
-//            default -> {
-//                if (ch <= 0x1F) {
-//                    escaped.append("\\u").append(hexFormat.toHexDigits((char) ch));
-//                } else if (ch >= 0xD800 && ch <= 0xDFFF) {
-//                    throw new IllegalArgumentException(
-//                            "RFC 8785 Compliance Error: Invalid Unicode data (lone surrogate) detected at index " + i);
-//                } else {
-//                    escaped.appendCodePoint(ch);
-//                }
-//            }
-//            }
-//            i += Character.charCount(ch);
-//        }
-//        return escaped.toString();
-//    }
 }
