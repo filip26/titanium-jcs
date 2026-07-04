@@ -80,13 +80,13 @@ class JcsTest {
     }
 
     static Object getJakartaJson(String name) throws IOException {
-        try (var parser = JakartaParser.createParser(JcsTest.class.getResourceAsStream(name), JAKARTA)) {
+        try (var parser = JakartaParser.newParser(JcsTest.class.getResourceAsStream(name), JAKARTA)) {
             return Tree.read(parser);
         }
     }
 
     static Object getJacksonJson(String name) throws IOException {
-        try (var parser = Jackson2Parser.createParser(JcsTest.class.getResourceAsStream(name), JACKSON)) {
+        try (var parser = Jackson2Parser.newParser(JcsTest.class.getResourceAsStream(name), JACKSON)) {
             return Tree.read(parser);
         }
     }
