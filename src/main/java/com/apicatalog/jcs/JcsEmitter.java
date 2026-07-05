@@ -90,7 +90,7 @@ public final class JcsEmitter implements TreeEmitter {
         try {
             if (context == NodeContext.ELEMENT) {
                 writer.write(',');
-            }            
+            }
             writer.write('[');
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -157,7 +157,7 @@ public final class JcsEmitter implements TreeEmitter {
         try {
             if (context == NodeContext.ENTRY_KEY || context == NodeContext.ELEMENT) {
                 writer.write(',');
-            }            
+            }
             writer.write('"');
             writer.write(Jcs.escape(node));
             writer.write('"');
@@ -198,7 +198,7 @@ public final class JcsEmitter implements TreeEmitter {
         try {
             if (context == NodeContext.ELEMENT) {
                 writer.write(',');
-            }            
+            }
             writer.write(Jcs.canonizeNumber(node));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -243,11 +243,12 @@ public final class JcsEmitter implements TreeEmitter {
     }
 
     /**
-     * Throws an exception as binary values are not supported by JCS.
+     * Throws an exception as binary values are not supported by JCS. Always throws
+     * {@link UnsupportedOperationException}.
      *
      * @param context the current node context
      * @param node    the binary data array
-     * @throws always throws UnsupportedOperationException
+     * @throws UnsupportedOperationException
      */
     @Override
     public void binaryValue(NodeContext context, byte[] node) {

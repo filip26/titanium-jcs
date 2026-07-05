@@ -2,7 +2,7 @@
  * RFC 8785 JSON Canonicalization Scheme (JCS) operations for converting object
  * structures (maps, collections, scalars) into deterministic byte sequences.
  *
- * <h3>Core Components</h3>
+ * <b>Core Components</b>
  * <ul>
  * <li>{@link com.apicatalog.jcs.Jcs} - Static methods for immediate
  * canonicalization and deep canonical comparison.</li>
@@ -10,7 +10,7 @@
  * output generation.</li>
  * </ul>
  *
- * <h3>Examples</h3>
+ * <b>Examples</b>
  * 
  * <pre>{@code
  * // Canonicalize an object to a string representation
