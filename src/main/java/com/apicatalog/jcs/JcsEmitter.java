@@ -1,0 +1,257 @@
+/*
+ * Copyright 2020 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.apicatalog.jcs;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+
+import com.apicatalog.tree.io.Tree.NodeContext;
+import com.apicatalog.tree.io.TreeEmitter;
+
+/**
+ * A non-recursive, streaming {@link TreeEmitter} implementation that writes a
+ * canonical representation of a structure as defined by
+ * <a href="https://tools.ietf.org/html/rfc8785">JSON Canonicalization Scheme
+ * (JCS), RFC 8785</a>.
+ */
+public final class JcsEmitter implements TreeEmitter {
+
+    private static byte[] NULL = "null".getBytes(StandardCharsets.UTF_8);
+    private static byte[] TRUE = "true".getBytes(StandardCharsets.UTF_8);
+    private static byte[] FALSE = "false".getBytes(StandardCharsets.UTF_8);
+
+    private final OutputStream writer;
+
+    /**
+     * Creates a new instance.
+     *
+     * @param writer The writer to which the canonical output is written.
+     */
+    public JcsEmitter(OutputStream writer) {
+        super();
+        this.writer = writer;
+    }
+
+    /**
+     * Writes the beginning of a map structure.
+     *
+     * @param context the current node context
+     */
+    @Override
+    public void beginMap(NodeContext context) {
+        try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
+            writer.write('{');
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes the end of a map structure.
+     *
+     * @param context the current node context
+     */
+    @Override
+    public void endMap(NodeContext context) {
+        try {
+            writer.write('}');
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes the beginning of a collection structure.
+     *
+     * @param context the current node context
+     */
+    @Override
+    public void beginSequence(NodeContext context) {
+        try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
+            writer.write('[');
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes the end of a collection structure.
+     *
+     * @param context the current node context
+     */
+    @Override
+    public void endSequence(NodeContext context) {
+        try {
+            writer.write(']');
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes a null value literal.
+     *
+     * @param context the current node context
+     */
+    @Override
+    public void nullValue(NodeContext context) {
+        try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
+            writer.write(NULL);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes a boolean value literal.
+     *
+     * @param context the current node context
+     * @param node    the boolean value to write
+     */
+    @Override
+    public void booleanValue(NodeContext context, boolean node) {
+        try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
+            writer.write(node ? TRUE : FALSE);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes a string value literal, escaping it according to JCS rules.
+     *
+     * @param context the current node context
+     * @param node    the string value to write
+     */
+    @Override
+    public void stringValue(NodeContext context, String node) {
+        try {
+            if (context == NodeContext.ENTRY_KEY || context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
+            writer.write('"');
+            writer.write(Jcs.escape(node));
+            writer.write('"');
+            if (context == NodeContext.ENTRY_KEY || context == NodeContext.FIRST_ENTRY_KEY) {
+                writer.write(':');
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes a numeric value from a primitive long.
+     *
+     * @param context the current node context
+     * @param node    the long value to write
+     */
+    @Override
+    public void numericValue(NodeContext context, long node) {
+        try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
+            writer.write(Jcs.canonizeNumber(node));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes a numeric value from a BigInteger.
+     *
+     * @param context the current node context
+     * @param node    the BigInteger value to write
+     */
+    @Override
+    public void numericValue(NodeContext context, BigInteger node) {
+        try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
+            writer.write(Jcs.canonizeNumber(node));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes a numeric value from a primitive double.
+     *
+     * @param context the current node context
+     * @param node    the double value to write
+     */
+    @Override
+    public void numericValue(NodeContext context, double node) {
+        try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
+            writer.write(Jcs.canonizeNumber(node));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Writes a numeric value from a BigDecimal, formatting it into its canonical
+     * string representation.
+     *
+     * @param context the current node context
+     * @param node    the BigDecimal value to write
+     */
+    @Override
+    public void numericValue(NodeContext context, BigDecimal node) {
+        try {
+            if (context == NodeContext.ELEMENT) {
+                writer.write(',');
+            }
+            writer.write(Jcs.canonizeNumber(node));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Throws an exception as binary values are not supported by JCS. Always throws
+     * {@link UnsupportedOperationException}.
+     *
+     * @param context the current node context
+     * @param node    the binary data array
+     * @throws UnsupportedOperationException
+     */
+    @Override
+    public void binaryValue(NodeContext context, byte[] node) {
+        throw new UnsupportedOperationException();
+    }
+}

@@ -15,339 +15,402 @@
  */
 package com.apicatalog.jcs;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.math.BigDecimal;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
-import java.util.Map;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HexFormat;
+import java.util.Map.Entry;
 
-import com.apicatalog.tree.io.Tree.NodeType;
-import com.apicatalog.tree.io.TreeAdapter;
-import com.apicatalog.tree.io.TreeComparison;
-import com.apicatalog.tree.io.TreeIOException;
-import com.apicatalog.tree.io.java.JavaAdapter;
+import com.apicatalog.tree.io.Tree;
+import com.apicatalog.tree.io.TreeCursor;
+import com.apicatalog.tree.io.TreeTraverser;
+import com.apicatalog.tree.io.java.NativeTraverser;
 
 /**
  * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">RFC
  * 8785 JSON Canonicalization Scheme (JCS)</a>.
  *
  * <p>
- * This class provides the primary API for canonicalizing JSON structures into a
- * deterministic string representation and for comparing JSON values for
+ * This class provides the primary API for canonicalizing Java object structures
+ * (such as Map, Collection, String, Number, Boolean, or null) into a
+ * deterministic string representation and for comparing Java objects for
  * canonical equality. All methods are static and thread-safe.
  * </p>
  *
  * <p>
- * The implementation is agnostic to the underlying JSON object model by using
- * the {@link com.apicatalog.tree.io.TreeAdapter} interface to interact with
- * JSON structures.
+ * The implementation is completely agnostic by using the
+ * {@link com.apicatalog.tree.io.TreeTraverser} abstraction to interact with
+ * structures.
  * </p>
  *
  * <h2>Usage Examples</h2>
  * 
  * <pre>{@code
- * // Canonicalize a JSON value and get the result as a String
- * String canonicalJson = Jcs.canonize(jsonValue, adapter);
+ * // Canonicalize a Java object and get the result as a String
+ * String canonical = Jcs.canonize(javaObject);
  *
- * // Canonicalize a JSON value and write to a Writer
- * Jcs.canonize(jsonValue, adapter, writer);
+ * // Canonicalize a Java object and write to a Writer
+ * Jcs.canonize(javaObject, writer);
  *
- * // Compare two JSON values for canonical equality
- * boolean areEqual = Jcs.equals(jsonValue1, jsonValue2, adapter);
+ * // Compare two Java objects for canonical equality
+ * boolean areEqual = Jcs.equals(javaObject1, javaObject2);
  * }</pre>
  *
- * @see #canonize(Object, com.apicatalog.tree.io.TreeAdapter)
- * @see #equals(Object, Object, com.apicatalog.tree.io.TreeAdapter)
+ * @see #canonize(Object)
+ * @see #equals(Object, Object)
  */
-public final class Jcs {
+public class Jcs {
 
     /**
-     * Exponent notation format for numbers outside the range [10<sup>-21</sup>,
-     * 10<sup>21</sup>).
-     */
-    private static final DecimalFormat E_FORMAT_BIG_DECIMAL = new DecimalFormat("0E00",
-            new DecimalFormatSymbols(Locale.ENGLISH));
-
-    /**
-     * Plain notation format for numbers within the range [10<sup>-21</sup>,
-     * 10<sup>21</sup>).
-     */
-    private static final DecimalFormat PLAIN_FORMAT = new DecimalFormat("0.#####################",
-            new DecimalFormatSymbols(Locale.ENGLISH));
-
-    /**
-     * Canonicalizes as JSON object according to JCS (RFC 8785) and returns the
-     * result as a {@link String}.
+     * Compares two map entries by their string keys lexicographically.
      *
-     * @param value the Map representing JSON object to canonicalize (can be
-     *              {@code null})
-     * @return a string containing the canonical JSON representation
-     * @throws TreeIOException
+     * <p>
+     * This comparator is used to enforce deterministic sorting of entry keys during
+     * canonicalization processing.
+     * </p>
+     *
+     * @param e1 the first map entry to compare
+     * @param e2 the second map entry to compare
+     * @return a negative integer, zero, or a positive integer as the first entry
+     *         key is less than, equal to, or greater than the second entry key
+     * @throws IllegalArgumentException if either entry key is not a {@link String}
      */
-    public static String canonize(final Map<String, Object> value) throws TreeIOException {
-        return canonize(value, JavaAdapter.instance());
+    public static int entryKeyComparator(Entry<?, ?> e1, Entry<?, ?> e2) {
+        if (e1.getKey() instanceof String key1 && e2.getKey() instanceof String key2) {
+            return key1.compareTo(key2);
+        }
+        throw new IllegalArgumentException();
     }
 
     /**
-     * Canonicalizes a JSON value according to JCS (RFC 8785) and returns the result
-     * as a {@link String}.
+     * Compares two scalar nodes for canonical equality using agnostic cursors.
      *
-     * @param value   the JSON value to canonicalize (can be {@code null})
-     * @param adapter the {@link TreeAdapter} used to inspect the JSON value
-     * @return a string containing the canonical JSON representation
-     * @throws TreeIOException
+     * <p>
+     * Two scalar nodes are canonically equal if they represent equivalent scalar
+     * types (null, boolean, string, or number) and their normalized values match
+     * according to JCS rules.
+     * </p>
+     *
+     * @param cursor1 the first agnostic {@link TreeCursor} pointing to a scalar
+     *                node
+     * @param cursor2 the second agnostic {@link TreeCursor} pointing to a scalar
+     *                node
+     * @return {@code true} if the scalar values are canonically equal,
+     *         {@code false} otherwise
+     * @throws IllegalArgumentException if a cursor points to a non-scalar node type
      */
-    public static String canonize(final Object value, final TreeAdapter adapter) throws TreeIOException {
+    public static boolean scalarEquals(TreeCursor cursor1, TreeCursor cursor2) {
+        return switch (cursor1.nodeType()) {
+        case NULL, TRUE, FALSE -> true;
+
+        case STRING -> Arrays.equals(escape(cursor1.stringValue()), escape(cursor2.stringValue()));
+
+        case NUMBER -> Arrays.equals(canonizeNumber(cursor1.numberValue()), canonizeNumber(cursor2.numberValue()));
+
+        default -> throw new IllegalArgumentException("Expected scalar node but got " + cursor1.nodeType());
+        };
+    }
+
+    /**
+     * Canonicalizes a Java object (such as Map, Collection, String, Number,
+     * Boolean, or null) according to JCS (RFC 8785) and returns the result as a
+     * {@link String}.
+     *
+     * @param value the Java object to canonicalize (can be {@code null})
+     * @return byte array containing the canonical representation
+     */
+    public static byte[] canonize(final Object value) {
         try {
-            final var writer = new StringWriter();
-            canonize(value, adapter, writer);
-            return writer.toString();
+            var bos = new ByteArrayOutputStream();
+            canonize(value, bos);
+            return bos.toByteArray();
 
         } catch (IOException e) {
-            // This should not happen with a StringWriter
-            throw new IllegalStateException("Unexpected IOException from StringWriter.", e);
+            // should not happen for StringWriter()
+            throw new IllegalStateException(e);
         }
     }
 
     /**
-     * Canonicalizes {@link Map} representing JSON object according to JCS (RFC
-     * 8785) and writes the output to the provided {@link Writer}.
+     * Canonicalizes a Java object (such as Map, Collection, String, Number,
+     * Boolean, or null) according to JCS (RFC 8785) and writes the output to the
+     * provided {@link OutputStream}.
      *
-     * @param value  the {@link Map} representing JSON object to canonicalize (can
-     *               be {@code null})
-     * @param writer the {@link Writer} to which the canonical output is written
-     * @throws IOException     if an I/O error occurs
-     * @throws TreeIOException
+     * @param value the Java object to canonicalize (can be {@code null})
+     * @param os    the {@link OutputStream} to which the canonical output is
+     *              written
+     * @throws IOException if an error occurs during canonicalization processing or
+     *                     writing
      */
-    public static void canonize(final Map<String, Object> value, final Writer writer)
-            throws IOException, TreeIOException {
-        canonize(value, JavaAdapter.instance(), writer);
+    public static void canonize(final Object value, OutputStream os) throws IOException {
+        canonize(new NativeTraverser(value, Jcs::entryKeyComparator), os);
     }
 
     /**
-     * Canonicalizes a JSON value according to JCS (RFC 8785) and writes the output
-     * to the provided {@link Writer}.
+     * Canonicalizes structure agnostic traversal according to JCS (RFC 8785) and
+     * returns the result as a {@link String}. The {@link TreeTraverser} must have
+     * set {@link TreeTraverser#comparator(java.util.Comparator)} to
+     * {@link #entryKeyComparator(Entry, Entry)} equivalent.
      *
-     * @param value   the JSON value to canonicalize (can be {@code null})
-     * @param adapter the {@link TreeAdapter} used to inspect the JSON value
-     * @param writer  the {@link Writer} to which the canonical output is written
-     * @throws IOException     if an I/O error occurs
-     * @throws TreeIOException
+     * @param traverser the agnostic {@link TreeTraverser} to canonicalize
+     * @return byte array containing the canonical representation
      */
-    public static void canonize(final Object value, final TreeAdapter adapter, final Writer writer)
-            throws IOException, TreeIOException {
-        if (adapter.isNull(value)) {
-            writer.write("null");
-            return;
+    protected static byte[] canonize(TreeTraverser<?> traverser) {
+        try {
+            var bos = new ByteArrayOutputStream();
+            canonize(traverser, bos);
+            return bos.toByteArray();
+        } catch (IOException e) {
+            // should not happen for StringWriter()
+            throw new IllegalStateException(e);
         }
-        (new JcsGenerator(writer)).node(value, adapter);
     }
 
     /**
-     * Compares two {@link Map} representing JSON objects for canonical equality
-     * under JCS (RFC 8785).
+     * Canonicalizes structure agnostic traversal according to JCS (RFC 8785) and
+     * writes the output to the provided {@link OutputStream}. The
+     * {@link TreeTraverser} must have set
+     * {@link TreeTraverser#comparator(java.util.Comparator)} to
+     * {@link #entryKeyComparator(Entry, Entry)} equivalent.
+     *
+     * @param traverser the agnostic {@link TreeTraverser} to canonicalize
+     * @param os        the {@link OutputStream} to which the canonical output is
+     *                  written
+     * @throws IOException if an error occurs during canonicalization processing or
+     *                     writing
+     */
+    protected static void canonize(TreeTraverser<?> traverser, OutputStream os) throws IOException {
+        Tree.write(traverser, new JcsEmitter(os));
+    }
+
+    /**
+     * Compares two Java objects (such as Map, Collection, String, Number, Boolean,
+     * or null) for canonical equality under JCS (RFC 8785).
      *
      * <p>
-     * Two JSON values are canonically equal if their data models are equivalent.
+     * Two Java objects are canonically equal if their data models are equivalent.
      * This involves comparing numbers by their canonical string representation and
-     * objects by their members, sorted lexicographically by key.
+     * objects/maps by their members, sorted lexicographically by key.
      * </p>
      *
-     * @param value1 the first {@link Map} representing JSON object to compare (can
-     *               be {@code null})
-     * @param value2 the second {@link Map} representing JSON object to compare (can
-     *               be {@code null})
+     * @param value1 the first Java object to compare (can be {@code null})
+     * @param value2 the second Java object to compare (can be {@code null})
      * @return {@code true} if the values are canonically equal, {@code false}
      *         otherwise
      */
-    public static boolean equals(final Map<String, Object> value1, final Map<String, Object> value2) {
-        return equals(value1, value2, JavaAdapter.instance());
+    public static boolean equals(final Object value1, final Object value2) {
+
+        var cursor1 = new NativeTraverser(value1, Jcs::entryKeyComparator);
+        var cursor2 = new NativeTraverser(value2, Jcs::entryKeyComparator);
+
+        return equals(cursor1, cursor2);
+    }
+
+    protected static boolean equals(TreeTraverser<?> node1, TreeTraverser<?> node2) {
+        return Tree.identical(node1, node2, Jcs::scalarEquals);
     }
 
     /**
-     * Compares two JSON values for canonical equality under JCS (RFC 8785).
+     * Canonicalizes as JSON number according to JCS (RFC 8785).
      *
-     * <p>
-     * Two JSON values are canonically equal if their data models are equivalent.
-     * This involves comparing numbers by their canonical string representation and
-     * objects by their members, sorted lexicographically by key.
-     * </p>
+     * Numbers are strictly restricted to IEEE 754 double-precision format.
+     * Serialization matches ECMAScript Number.prototype.toString() rules exactly.
      *
-     * @param value1  the first JSON value to compare (can be {@code null})
-     * @param value2  the second JSON value to compare (can be {@code null})
-     * @param adapter the {@link TreeAdapter} used to inspect the JSON values
-     * @return {@code true} if the values are canonically equal, {@code false}
-     *         otherwise
+     * @param number the BigDecimal to canonicalize
+     * @return the canonical byte array representation of the number
+     * @throws IllegalArgumentException if the number overflows IEEE limits
      */
-    public static boolean equals(final Object value1, final Object value2, final TreeAdapter adapter) {
-        if (value1 == null) {
-            return value2 == null || adapter.isNull(value2);
+    public static byte[] canonizeNumber(final Number number) {
+        double d = number.doubleValue();
 
-        } else if (value2 == null) {
-            return adapter.isNull(value1);
+        if (Double.isInfinite(d) || Double.isNaN(d)) {
+            throw new IllegalArgumentException("RFC 8785 Compliance Error: Number exceeds IEEE 754 limits");
         }
 
-        NodeType nodeType1 = adapter.type(value1);
-        NodeType nodeType2 = adapter.type(value2);
-
-        if (nodeType1 != nodeType2) {
-            return false;
+        if (d == 0.0) {
+            return new byte[] { '0' };
         }
 
-        switch (nodeType1) {
-        case NULL:
-        case TRUE:
-        case FALSE:
-            return true;
+        var string = Double.toString(d);
 
-        case STRING:
-            return escape(adapter.stringValue(value1)).equals(escape(adapter.stringValue(value2)));
+        var isNegative = d < 0.0;
+        var start = isNegative ? 1 : 0;
 
-        case NUMBER:
-            return canonizeNumber(adapter.asDecimal(value1)).equals(canonizeNumber(adapter.asDecimal(value2)));
-
-        case SEQUENCE:
-            return arrayEquals(value1, value2, adapter);
-
-        case MAP:
-            return objectEquals(value1, value2, adapter);
-
-        default:
-            return false;
+        var eIndex = string.indexOf('E', start);
+        if (eIndex == -1) {
+            if (string.endsWith(".0")) {
+                int length = string.length() - 2;
+                byte[] res = new byte[length];
+                for (int i = 0; i < length; i++) {
+                    res[i] = (byte) string.charAt(i);
+                }
+                return res;
+            }
+            return string.getBytes(StandardCharsets.UTF_8);
         }
-    }
 
-    /**
-     * Compares two JSON objects for canonical equality.
-     * <p>
-     * Objects are equal if they have the same set of keys and the corresponding
-     * values for each key are canonically equal.
-     * </p>
-     *
-     * @param object1 the first object
-     * @param object2 the second object
-     * @param adapter the node adapter
-     * @return {@code true} if the objects are canonically equal, {@code false}
-     *         otherwise
-     */
-    static boolean objectEquals(final Object object1, final Object object2, final TreeAdapter adapter) {
+        int dot = string.indexOf('.', start);
+        char firstDigit = string.charAt(start);
 
-        final var entries1 = adapter.entryStream(object1)
-                .sorted(TreeComparison.comparingEntryKey(adapter::asString))
-                .iterator();
+        int fracStart = (dot < 0) ? start + 1 : dot + 1;
+        int fracEnd = eIndex;
+        while (fracEnd > fracStart && string.charAt(fracEnd - 1) == '0') {
+            fracEnd--;
+        }
+        int fracLen = fracEnd - fracStart;
 
-        final var entries2 = adapter.entryStream(object2)
-                .sorted(TreeComparison.comparingEntryKey(adapter::asString))
-                .iterator();
+        int exponent = Integer.parseInt(string, eIndex + 1, string.length(), 10);
 
-        while (entries1.hasNext() && entries2.hasNext()) {
+        byte[] buf = new byte[128];
+        int pos = 0;
 
-            final var entry1 = entries1.next();
-            final var entry2 = entries2.next();
+        if (isNegative) {
+            buf[pos++] = '-';
+        }
 
-            if (!adapter.asString(entry1.getKey()).equals(adapter.asString(entry2.getKey()))
-                    || !equals(entry1.getValue(), entry2.getValue(), adapter)) {
-                return false;
+        if (exponent >= 21 || exponent <= -7) {
+            buf[pos++] = (byte) firstDigit;
+            if (fracLen > 0) {
+                buf[pos++] = '.';
+                for (int i = fracStart; i < fracEnd; i++) {
+                    buf[pos++] = (byte) string.charAt(i);
+                }
+            }
+            buf[pos++] = 'e';
+            if (exponent > 0) {
+                buf[pos++] = '+';
+            }
+            String expStr = Integer.toString(exponent);
+            for (int i = 0; i < expStr.length(); i++) {
+                buf[pos++] = (byte) expStr.charAt(i);
+            }
+            return Arrays.copyOf(buf, pos);
+        }
+
+        if (exponent == 0) {
+            buf[pos++] = (byte) firstDigit;
+            if (fracLen > 0) {
+                buf[pos++] = '.';
+                for (int i = fracStart; i < fracEnd; i++) {
+                    buf[pos++] = (byte) string.charAt(i);
+                }
+            }
+        } else if (exponent > 0) {
+            buf[pos++] = (byte) firstDigit;
+            if (exponent >= fracLen) {
+                for (int i = fracStart; i < fracEnd; i++) {
+                    buf[pos++] = (byte) string.charAt(i);
+                }
+                int remainingZeros = exponent - fracLen;
+                for (int i = 0; i < remainingZeros; i++) {
+                    buf[pos++] = '0';
+                }
+            } else {
+                for (int i = 0; i < exponent; i++) {
+                    buf[pos++] = (byte) string.charAt(fracStart + i);
+                }
+                buf[pos++] = '.';
+                for (int i = exponent; i < fracLen; i++) {
+                    buf[pos++] = (byte) string.charAt(fracStart + i);
+                }
+            }
+        } else {
+            buf[pos++] = '0';
+            buf[pos++] = '.';
+            int leadingZeros = (-exponent) - 1;
+            for (int i = 0; i < leadingZeros; i++) {
+                buf[pos++] = '0';
+            }
+            buf[pos++] = (byte) firstDigit;
+            for (int i = fracStart; i < fracEnd; i++) {
+                buf[pos++] = (byte) string.charAt(i);
             }
         }
 
-        return !entries1.hasNext() && !entries2.hasNext();
+        return Arrays.copyOf(buf, pos);
     }
 
     /**
-     * Compares two JSON arrays for canonical equality.
-     * <p>
-     * Arrays are equal if they have the same length and their elements are
-     * canonically equal in the same order.
-     * </p>
-     *
-     * @param array1  the first array
-     * @param array2  the second array
-     * @param adapter the node adapter
-     * @return {@code true} if the arrays are canonically equal, {@code false}
-     *         otherwise
-     */
-    static boolean arrayEquals(final Object array1, final Object array2, final TreeAdapter adapter) {
-
-        final var it1 = adapter.elements(array1).iterator();
-        final var it2 = adapter.elements(array2).iterator();
-
-        while (it1.hasNext() && it2.hasNext()) {
-            if (!equals(it1.next(), it2.next(), adapter)) {
-                return false;
-            }
-        }
-        return !it1.hasNext() && !it2.hasNext();
-    }
-
-    /**
-     * Canonicalizes a JSON number according to JCS (RFC 8785).
-     * <p>
-     * Numbers are serialized using plain notation if they are within the range
-     * [10<sup>-21</sup>, 10<sup>21</sup>), and exponential notation otherwise.
-     * </p>
-     *
-     * @param number the {@link BigDecimal} to canonicalize
-     * @return the canonical string representation of the number
-     */
-    static String canonizeNumber(final BigDecimal number) {
-        if (number.compareTo(BigDecimal.ZERO) == 0) {
-            return "0";
-        }
-        if (number.scale() >= 21) {
-            return E_FORMAT_BIG_DECIMAL.format(number).toLowerCase();
-        }
-        if (number.scale() <= -21) {
-            return E_FORMAT_BIG_DECIMAL.format(number).replace("E", "e+");
-        }
-        return PLAIN_FORMAT.format(number.doubleValue());
-    }
-
-    /**
-     * Escapes a string according to JCS (RFC 8785, Section 2.5) rules.
+     * Escapes a string according to JCS (RFC 8785, Section 2.5) rules and encodes
+     * the result directly to a UTF-8 byte array.
      *
      * @param value the string to escape
-     * @return the escaped string
+     * @return the escaped UTF-8 byte array
+     * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
+     *                                  detected
      */
-    static String escape(String value) {
-        final StringBuilder escaped = new StringBuilder();
-        int[] codePoints = value.codePoints().toArray();
+    static byte[] escape(String value) {
+        final int length = value.length();
+        final ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(length, 16));
+        final HexFormat hexFormat = HexFormat.of();
 
-        for (int ch : codePoints) {
+        for (int i = 0; i < length;) {
+            int ch = value.codePointAt(i);
             switch (ch) {
-            case '\t':
-                escaped.append("\\t");
-                break;
-            case '\b':
-                escaped.append("\\b");
-                break;
-            case '\n':
-                escaped.append("\\n");
-                break;
-            case '\r':
-                escaped.append("\\r");
-                break;
-            case '\f':
-                escaped.append("\\f");
-                break;
-            case '\"':
-                escaped.append("\\\"");
-                break;
-            case '\\':
-                escaped.append("\\\\");
-                break;
-            default:
-                if (ch >= 0x00 && ch <= 0x1F) {
-                    escaped.append(String.format("\\u%04x", ch));
-                } else {
-                    escaped.appendCodePoint(ch);
-                }
-                break;
+            case '\t' -> {
+                out.write('\\');
+                out.write('t');
             }
+            case '\b' -> {
+                out.write('\\');
+                out.write('b');
+            }
+            case '\n' -> {
+                out.write('\\');
+                out.write('n');
+            }
+            case '\r' -> {
+                out.write('\\');
+                out.write('r');
+            }
+            case '\f' -> {
+                out.write('\\');
+                out.write('f');
+            }
+            case '\"' -> {
+                out.write('\\');
+                out.write('"');
+            }
+            case '\\' -> {
+                out.write('\\');
+                out.write('\\');
+            }
+            default -> {
+                if (ch <= 0x1F) {
+                    out.write('\\');
+                    out.write('u');
+                    out.write('0');
+                    out.write('0');
+                    out.write(hexFormat.toHighHexDigit((byte) ch));
+                    out.write(hexFormat.toLowHexDigit((byte) ch));
+
+                } else if (ch >= 0xD800 && ch <= 0xDFFF) {
+                    throw new IllegalArgumentException(
+                            "RFC 8785 Compliance Error: Invalid Unicode data (lone surrogate) detected at index " + i);
+                } else if (ch <= 0x7F) {
+                    out.write(ch);
+
+                } else if (ch <= 0x7FF) {
+                    out.write(0xC0 | (ch >> 6));
+                    out.write(0x80 | (ch & 0x3F));
+
+                } else if (ch <= 0xFFFF) {
+                    out.write(0xE0 | (ch >> 12));
+                    out.write(0x80 | ((ch >> 6) & 0x3F));
+                    out.write(0x80 | (ch & 0x3F));
+
+                } else {
+                    out.write(0xF0 | (ch >> 18));
+                    out.write(0x80 | ((ch >> 12) & 0x3F));
+                    out.write(0x80 | ((ch >> 6) & 0x3F));
+                    out.write(0x80 | (ch & 0x3F));
+                }
+            }
+            }
+            i += Character.charCount(ch);
         }
-        return escaped.toString();
+        return out.toByteArray();
     }
 }

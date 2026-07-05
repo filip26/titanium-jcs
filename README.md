@@ -22,30 +22,39 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 
 ## ✨ Features
 
-- **Non-recursive Canonical JSON Writer**  
-  Deterministically serializes JSON values into a stable, repeatable form 
+- **Non-recursive Canonical JCS Writer**  
+  Deterministically serializes values into a stable, repeatable form 
   following [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785).  
 
-- **Canonical JSON Equality Comparator**  
-  Compares JSON values for equality under JCS rules, ensuring numbers, objects, 
+- **Canonical JCS Equality Comparator**  
+  Compares values for equality under JCS rules, ensuring numbers, objects, 
   and arrays are compared in their canonical form rather than raw text.
   
 - **Uniform, JSON Library-Agnostic API**  
   Built on a uniform [Tree I/O API](https://github.com/filip26/tree-io) for JSON data processing.  
   Jackson and Jakarta are supported out of the box.
+  
 
 ## Example
 
 ```javascript
-// Canonicalize a JSON value and return the canonical string
-var canonicalJson = Jcs.canonize(json, adapter);
 
-// Canonicalize a JSON value and write canonical JSON to a writer
-Jcs.canonize(json, adapter, writer);
+var value = List.of(
+    333333333.33333329,
+    1E30,
+    0.00000001);
 
-// Compare two JSON values for canonical equality
-if (Jcs.equals(json1, json2, adapter)) {
-  // values are equal under RFC 8785 rules
+// Canonicalize a value and return its canonical JSON string
+var result = Jcs.canonize(value);
+
+// result = "[333333333.3333333,1e+30,1e-8]"
+
+// Or canonicalize a value and write the canonical JSON to a writer
+Jcs.canonize(value, writer);
+
+// Compare two values for canonical equality
+if (Jcs.equals(value1, value2)) {
+    // Values are equal under RFC 8785 rules
 }
 ```
 
@@ -57,27 +66,6 @@ if (Jcs.equals(json1, json2, adapter)) {
     <groupId>com.apicatalog</groupId>
     <artifactId>titanium-jcs</artifactId>
     <version>${titanium-jcs.version}</version>
-</dependency>
-
-<!-- Include at least one Tree I/O JSON adapter -->
-
-<!-- Jackson 2 -->
-<dependency>
-    <groupId>com.apicatalog</groupId>
-    <artifactId>tree-io-jackson2</artifactId>
-    <version>${tree-io.version}</version>
-</dependency>
-
-<!-- Jakarta (JSONP) -->
-<dependency>
-    <groupId>com.apicatalog</groupId>
-    <artifactId>tree-io-jakarta</artifactId>
-    <version>${tree-io.version}</version>
-</dependency>
-<dependency>
-    <groupId>org.glassfish</groupId>
-    <artifactId>jakarta.json</artifactId>
-    <version>2.0.1</version>
 </dependency>
 ```
 
