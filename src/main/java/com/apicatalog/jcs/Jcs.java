@@ -122,15 +122,23 @@ public class Jcs {
      * @return byte array containing the canonical representation
      */
     public static byte[] canonize(final Object value) {
-        try {
-            var bos = new ByteArrayOutputStream();
-            canonize(value, bos);
-            return bos.toByteArray();
+        return switch (value) {
+        case null -> JcsEmitter.NULL;
+        case Boolean bool -> bool ? JcsEmitter.TRUE : JcsEmitter.FALSE;
+        case Number number -> canonizeNumber(number);
+        case String string -> escape(string);
+        default -> {
+            try {
+                var bos = new ByteArrayOutputStream();
+                canonize(value, bos);
+                yield bos.toByteArray();
 
-        } catch (IOException e) {
-            // should not happen for StringWriter()
-            throw new IllegalStateException(e);
+            } catch (IOException e) {
+                // should not happen for StringWriter()
+                throw new IllegalStateException(e);
+            }
         }
+        };
     }
 
     /**
@@ -145,7 +153,14 @@ public class Jcs {
      *                     writing
      */
     public static void canonize(final Object value, OutputStream os) throws IOException {
-        canonize(new NativeTraverser(value, Jcs::entryKeyComparator), os);
+        switch (value) {
+        case null -> os.write(JcsEmitter.NULL);
+        case Boolean bool -> os.write(bool ? JcsEmitter.TRUE : JcsEmitter.FALSE);
+        case Number number -> os.write(canonizeNumber(number));
+        case String string -> os.write(escape(string));
+        default -> canonize(new NativeTraverser(value, Jcs::entryKeyComparator), os);
+        }
+        ;
     }
 
     /**

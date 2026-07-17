@@ -33,9 +33,9 @@ import com.apicatalog.tree.io.TreeEmitter;
  */
 public final class JcsEmitter implements TreeEmitter {
 
-    private static byte[] NULL = "null".getBytes(StandardCharsets.UTF_8);
-    private static byte[] TRUE = "true".getBytes(StandardCharsets.UTF_8);
-    private static byte[] FALSE = "false".getBytes(StandardCharsets.UTF_8);
+    static byte[] NULL = "null".getBytes(StandardCharsets.UTF_8);
+    static byte[] TRUE = "true".getBytes(StandardCharsets.UTF_8);
+    static byte[] FALSE = "false".getBytes(StandardCharsets.UTF_8);
 
     private final OutputStream writer;
 
