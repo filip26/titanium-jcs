@@ -362,7 +362,7 @@ public final class Jcs {
         Collections.sort(kb, Jcs::entryKeyComparator);
 
         for (int i = 0; i < ka.size(); i++) {
-            if (!ka.get(i).getKey().equals(kb.get(i).getKey())) {
+            if (!Arrays.equals(escape((String) ka.get(i).getKey()), escape((String) kb.get(i).getKey()))) {
                 return false;
             }
         }
@@ -392,7 +392,6 @@ public final class Jcs {
             }
 
             if (a instanceof Entry<?, ?> ea && b instanceof Entry<?, ?> eb) {
-
                 if (!equals(stack, ea.getValue(), eb.getValue())) {
                     return false;
                 }
