@@ -5,7 +5,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/af8879b14a3f45bd8205c7720a24612f)](https://app.codacy.com/gh/filip26/titanium-jcs/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![javadoc](https://javadoc.io/badge2/com.apicatalog/titanium-jcs/javadoc.svg)](https://javadoc.io/doc/com.apicatalog/titanium-jcs)
-[![Maven Central](https://img.shields.io/maven-central/v/com.apicatalog/titanium-jcs.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:com.apicatalog%20AND%20a:titanium-jcs)
+[![Maven Central](https://img.shields.io/maven-central/v/com.apicatalog/titanium-jcs.svg?label=Maven%20Central)](https://mvnrepository.com/artifact/com.apicatalog/titanium-jcs)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
@@ -17,8 +17,6 @@ By normalizing JSON into a canonical form, JCS ensures interoperability across s
 
 Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785).
 
-> 📝 Note: Handling decimals in JSON is a known challenge, and certain corner cases may not behave as expected. JCS adheres to ECMAScript’s number handling, which can reflect these limitations with decimal values.
-
 
 ## ✨ Features
 
@@ -28,13 +26,13 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 
 - **Canonical JCS Equality Comparator**  
   Compares values for equality under JCS rules, ensuring numbers, objects, 
-  and arrays are compared in their canonical form rather than raw text.
+  and arrays are compared in their canonical form rather than raw values.
   
-- **Uniform, JSON Library-Agnostic API**  
-  Built on a uniform [Tree I/O API](https://github.com/filip26/tree-io) for JSON data processing.  
-  Jackson and Jakarta are supported out of the box.
+- **Library-Agnostic API, Zero Dependencies**  
+  Operates on standard Java types (`Map`, `Collection`, `String`, `Boolean`, `Number`, `null`).
+  Can be used with [Tree I/O](https://github.com/filip26/tree-io) for JSON data processing while
+  remaining independent of any specific JSON library.
   
-
 ## Example
 
 ```javascript
@@ -44,13 +42,15 @@ var value = List.of(
     1E30,
     0.00000001);
 
-// Canonicalize a value and return its canonical JSON string
-var result = Jcs.canonize(value);
+// Canonicalize a value and return its canonical form
+byte[] result = Jcs.canonize(value); // = "[333333333.3333333,1e+30,1e-8]"
 
-// result = "[333333333.3333333,1e+30,1e-8]"
+// Or canonicalize a value and write the canonical JSON to an output stream
+Jcs.canonize(value, os);
 
-// Or canonicalize a value and write the canonical JSON to a writer
-Jcs.canonize(value, writer);
+// Set maximum visited nodes limit to prevent resource exhaustion and 
+// denial-of-service from overly complex or deeply nested structures
+byte[] result = Jcs.canonize(value, 1000);
 
 // Compare two values for canonical equality
 if (Jcs.equals(value1, value2)) {
@@ -65,7 +65,7 @@ if (Jcs.equals(value1, value2)) {
 <dependency>
     <groupId>com.apicatalog</groupId>
     <artifactId>titanium-jcs</artifactId>
-    <version>${titanium-jcs.version}</version>
+    <version>${jcs.version}</version>
 </dependency>
 ```
 
