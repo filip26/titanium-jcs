@@ -26,7 +26,7 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 
 - **Canonical JCS Equality Comparator**  
   Compares values for equality under JCS rules, ensuring numbers, objects, 
-  and arrays are compared in their canonical form rather than raw text.
+  and arrays are compared in their canonical form rather than raw values.
   
 - **Library-Agnostic API, Zero Dependencies**  
   Operates on standard Java types (`Map`, `Collection`, `String`, `Boolean`, `Number`, `null`).
@@ -65,7 +65,7 @@ if (Jcs.equals(value1, value2)) {
 <dependency>
     <groupId>com.apicatalog</groupId>
     <artifactId>titanium-jcs</artifactId>
-    <version>${titanium.jcs.version}</version>
+    <version>${jcs.version}</version>
 </dependency>
 ```
 

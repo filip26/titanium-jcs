@@ -85,7 +85,7 @@ public final class Jcs {
      *         key is less than, equal to, or greater than the second entry key
      * @throws IllegalArgumentException if either entry key is not a {@link String}
      */
-    public static int entryKeyComparator(Entry<?, ?> e1, Entry<?, ?> e2) {
+    private static int entryKeyComparator(Entry<?, ?> e1, Entry<?, ?> e2) {
         if (e1.getKey() instanceof String key1 && e2.getKey() instanceof String key2) {
             return key1.compareTo(key2);
         }
