@@ -39,14 +39,14 @@ var value = List.of(
     0.00000001);
 
 // Canonicalize a value and return its canonical form
-var result = Jcs.canonize(value); // = "[333333333.3333333,1e+30,1e-8]"
+byte[] result = Jcs.canonize(value); // = "[333333333.3333333,1e+30,1e-8]"
 
 // Or canonicalize a value and write the canonical JSON to an output stream
 Jcs.canonize(value, os);
 
 // Set maximum visited nodes limit to prevent resource exhaustion and 
 // denial-of-service from overly complex or deeply nested structures
-var result = Jcs.canonize(value, 1000);
+byte[] result = Jcs.canonize(value, 1000);
 
 // Compare two values for canonical equality
 if (Jcs.equals(value1, value2)) {

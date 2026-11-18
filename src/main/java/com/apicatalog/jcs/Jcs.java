@@ -49,11 +49,8 @@ import java.util.Map.Entry;
  * // Canonicalize a Java object and get the result as a String
  * byte[] canonical = Jcs.canonize(javaObject);
  *
- * // Canonicalize a Java object and write to a Writer
- * Jcs.canonize(javaObject, writer);
- *
  * // Compare two Java objects for canonical equality
- * boolean areEqual = Jcs.equals(javaObject1, javaObject2);
+ * boolean areEqual = Jcs.equals(a, b);
  * }</pre>
  *
  * @see #canonize(Object)
@@ -280,22 +277,152 @@ public final class Jcs {
      * objects/maps by their members, sorted lexicographically by key.
      * </p>
      *
-     * @param value1 the first Java object to compare (can be {@code null})
-     * @param value2 the second Java object to compare (can be {@code null})
+     * @param a the first Java object to compare (can be {@code null})
+     * @param b the second Java object to compare (can be {@code null})
      * @return {@code true} if the values are canonically equal, {@code false}
      *         otherwise
      */
-//    public static boolean equals(final Object value1, final Object value2) {
-//
-//        var cursor1 = new NativeTraverser(value1, Jcs::entryKeyComparator);
-//        var cursor2 = new NativeTraverser(value2, Jcs::entryKeyComparator);
-//
-//        return equals(cursor1, cursor2);
-//    }
-//
-//    protected static boolean equals(TreeTraverser<?> node1, TreeTraverser<?> node2) {
-//        return Tree.identical(node1, node2, Jcs::scalarEquals);
-//    }
+    public static boolean equals(final Object a, final Object b) {
+
+        if (a == b) {
+            return true;
+        }
+
+        if (a == null || b == null) {
+            return false;
+        }
+
+        if (a instanceof String sa && b instanceof String sb) {
+            return Arrays.equals(escape(sa), escape(sb));
+
+        } else if (a instanceof Number na && b instanceof Number nb) {
+            return Arrays.equals(canonizeNumber(na), canonizeNumber(nb));
+
+        } else if (a instanceof Map<?, ?> ma
+                && b instanceof Map<?, ?> mb) {
+
+            if (ma.size() != mb.size()) {
+                return false;
+            }
+
+            if (ma.isEmpty()) {
+                return true;
+            }
+
+            var stack = new ArrayDeque<Iterator<?>[]>();
+
+            return mapEquals(stack, ma, mb) && equals(stack);
+
+        } else if (a instanceof Collection ca
+                && b instanceof Collection cb) {
+
+            if (ca.size() != cb.size()) {
+                return false;
+            }
+            
+            if (ca.isEmpty()) {
+                return true;
+            }
+
+            var stack = new ArrayDeque<Iterator<?>[]>();
+            stack.push(new Iterator[] { ca.iterator(), cb.iterator() });
+            return equals(stack);
+        }
+
+        return false;
+    }
+
+    private static boolean mapEquals(Deque<Iterator<?>[]> stack, Map<?, ?> a, Map<?, ?> b) {
+
+        var ka = new ArrayList<>(a.entrySet());
+        var kb = new ArrayList<>(b.entrySet());
+
+        Collections.sort(ka, Jcs::entryKeyComparator);
+        Collections.sort(kb, Jcs::entryKeyComparator);
+
+        for (int i = 0; i < ka.size(); i++) {
+            if (!ka.get(i).getKey().equals(kb.get(i).getKey())) {
+                return false;
+            }
+        }
+
+        stack.push(new Iterator[] { ka.iterator(), kb.iterator() });
+        return true;
+    }
+    
+    private static boolean equals(Deque<Iterator<?>[]> stack) {
+
+        do {
+
+            var its = stack.peek();
+
+            var a = its[0].next();
+            var b = its[1].next();
+
+            if (!its[0].hasNext()) {
+                stack.pop();
+            }
+
+            if (a instanceof Entry<?, ?> ea && b instanceof Entry<?, ?> eb) {
+
+                if (!equals(stack, ea.getValue(), eb.getValue())) {
+                    return false;
+                }
+
+            } else if (!equals(stack, a, b)) {
+                return false;
+            }
+
+        } while (!stack.isEmpty());
+
+        return true;
+    }
+
+    private static boolean equals(Deque<Iterator<?>[]> stack, Object a, Object b) {
+        if (a == b) {
+            return true;
+        }
+
+        if (a == null || b == null) {
+            return false;
+        }
+
+        if (a instanceof String sa && b instanceof String sb) {
+            return Arrays.equals(escape(sa), escape(sb));
+
+        } else if (a instanceof Number na && b instanceof Number nb) {
+            return Arrays.equals(canonizeNumber(na), canonizeNumber(nb));
+
+        } else if (a instanceof Map<?, ?> ma
+                && b instanceof Map<?, ?> mb) {
+
+            if (ma.size() != mb.size()) {
+                return false;
+            }
+
+            if (ma.isEmpty()) {
+                return true;
+            }
+
+            return mapEquals(stack, ma, mb);
+
+        } else if (a instanceof Collection ca
+                && b instanceof Collection cb) {
+
+            if (ca.size() != cb.size()) {
+                return false;
+            }
+
+            if (ca.isEmpty()) {
+                return true;
+            }
+
+            stack.push(new Iterator[] { ca.iterator(), cb.iterator() });
+            return true;
+        }
+
+        return false;
+    }
 
     /**
      * Canonicalizes as JSON number according to JCS (RFC 8785).
