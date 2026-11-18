@@ -38,7 +38,7 @@ var value = List.of(
     1E30,
     0.00000001);
 
-// Canonicalize a value and return its canonical JSON string
+// Canonicalize a value and return its canonical form
 var result = Jcs.canonize(value); // = "[333333333.3333333,1e+30,1e-8]"
 
 // Or canonicalize a value and write the canonical JSON to an output stream
