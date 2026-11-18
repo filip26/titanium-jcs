@@ -99,7 +99,7 @@ public final class Jcs {
      * @param value the Java object to canonicalize (can be {@code null})
      * @return byte array containing the canonical representation
      */
-    public static byte[] canonize(final Object value) {
+    public static byte[] canonize(Object value) {
         return canonize(value, -1);
     }
 
@@ -113,7 +113,7 @@ public final class Jcs {
      *                   unlimited
      * @return byte array containing the canonical representation
      */
-    public static byte[] canonize(final Object value, final int maxVisited) {
+    public static byte[] canonize(Object value, int maxVisited) {
         return switch (value) {
         case null -> NULL;
         case Boolean bool -> bool ? TRUE : FALSE;
@@ -164,7 +164,7 @@ public final class Jcs {
      * @throws IOException if an error occurs during canonicalization processing or
      *                     writing
      */
-    public static void canonize(final Object value, OutputStream os) throws IOException {
+    public static void canonize(Object value, OutputStream os) throws IOException {
         canonize(value, os, -1);
     }
 
@@ -181,7 +181,7 @@ public final class Jcs {
      * @throws IOException if an error occurs during canonicalization processing or
      *                     writing
      */
-    public static void canonize(final Object value, OutputStream os, int maxVisited) throws IOException {
+    public static void canonize(Object value, OutputStream os, int maxVisited) throws IOException {
         var stack = new ArrayDeque<>();
         c14n(value, stack, os);
         if (!stack.isEmpty()) {
@@ -189,7 +189,7 @@ public final class Jcs {
         }
     }
 
-    private static void c14n(final Deque<Object> stack, OutputStream os, int maxVisited) throws IOException {
+    private static void c14n(Deque<Object> stack, OutputStream os, int maxVisited) throws IOException {
 
         int visited = 0;
 
@@ -282,7 +282,7 @@ public final class Jcs {
      * @return {@code true} if the values are canonically equal, {@code false}
      *         otherwise
      */
-    public static boolean equals(final Object a, final Object b) {
+    public static boolean equals(Object a, Object b) {
         return equals(a, b, -1);
     }
 
@@ -303,7 +303,7 @@ public final class Jcs {
      * @return {@code true} if the values are canonically equal, {@code false}
      *         otherwise
      */
-    public static boolean equals(final Object a, final Object b, int maxVisited) {
+    public static boolean equals(Object a, Object b, int maxVisited) {
 
         if (a == b) {
             return true;
@@ -462,7 +462,7 @@ public final class Jcs {
      * @return the canonical byte array representation of the number
      * @throws IllegalArgumentException if the number overflows IEEE limits
      */
-    public static byte[] canonizeNumber(final Number number) {
+    public static byte[] canonizeNumber(Number number) {
         double d = number.doubleValue();
 
         if (Double.isInfinite(d) || Double.isNaN(d)) {
@@ -605,7 +605,7 @@ public final class Jcs {
      * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
      *                                  detected
      */
-    static byte[] escape(String value) {
+    public static byte[] escape(String value) {
 
         if (value.length() == 0) {
             return new byte[0];
@@ -618,7 +618,7 @@ public final class Jcs {
 
     private static void escape(String value, ByteArrayOutputStream os) {
 
-        final HexFormat hexFormat = HexFormat.of();
+        final var hexFormat = HexFormat.of();
 
         for (int i = 0; i < value.length();) {
             int ch = value.codePointAt(i);
