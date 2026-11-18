@@ -67,6 +67,7 @@ public final class Jcs {
     public static byte[] FALSE = "false".getBytes(StandardCharsets.UTF_8);
     public static byte[] EMPTY_MAP = "{}".getBytes(StandardCharsets.UTF_8);
     public static byte[] EMPTY_ARRAY = "[]".getBytes(StandardCharsets.UTF_8);
+    public static byte[] EMPTY_STRING = "\"\"".getBytes(StandardCharsets.UTF_8);
 
     private Jcs() {
         // protected
@@ -248,7 +249,6 @@ public final class Jcs {
         case Number number -> os.write(canonizeNumber(number));
         case String string -> os.write(escapedString(string));
         case Map<?, ?> map -> {
-
             if (map.isEmpty()) {
                 os.write(EMPTY_MAP);
                 return;
@@ -431,6 +431,11 @@ public final class Jcs {
      *                                  detected
      */
     static byte[] escapedString(String value) {
+        
+        if (value.length() == 0) {
+            return EMPTY_STRING;
+        }
+        
         final int length = value.length();
         final ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(length + 2, 18));
         final HexFormat hexFormat = HexFormat.of();
