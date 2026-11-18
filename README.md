@@ -9,7 +9,6 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
-
 The JSON Canonicalization Scheme (JCS) defines a deterministic way to serialize JSON so that the same JSON data model always produces the same byte sequence.  
 
 This is critical for use cases such as digital signatures, hashing, and data integrity verification, where even small differences in whitespace, member ordering, or number formatting would otherwise break validation.  
@@ -21,13 +20,18 @@ Titanium JCS is a Java implementation of the [RFC 8785 JSON Canonicalization Sch
 
 ## ✨ Features
 
-- **Non-recursive Canonical JCS Writer**  
+- **Non-recursive Canonical JCS Writer**
   Deterministically serializes values into a stable, repeatable form 
   following [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785).  
 
 - **Canonical JCS Equality Comparator**  
   Compares values for equality under JCS rules, ensuring numbers, objects, 
   and arrays are compared in their canonical form rather than raw text.
+  
+- **Library-Agnostic API, Zero Dependencies**
+  Operates on standard Java types (`Map`, `Collection`, `String`, `Boolean`, `Number`, `null`).
+  Can be used with [Tree I/O](https://github.com/filip26/tree-io) for JSON data processing while
+  remaining independent of any specific JSON library.
   
 ## Example
 

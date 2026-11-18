@@ -56,6 +56,7 @@ import java.util.Map.Entry;
  * @see #canonize(Object)
  * @see #canonize(Object, int)
  * @see #equals(Object, Object)
+ * @see #equals(Object, Object, int)
  */
 public final class Jcs {
 
