@@ -18,38 +18,36 @@ package com.apicatalog.jcs;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.HexFormat;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
-import com.apicatalog.tree.io.Tree;
-import com.apicatalog.tree.io.TreeCursor;
-import com.apicatalog.tree.io.TreeTraverser;
-import com.apicatalog.tree.io.java.NativeTraverser;
-
 /**
- * An implementation of the <a href="https://www.rfc-editor.org/rfc/rfc8785">RFC
- * 8785 JSON Canonicalization Scheme (JCS)</a>.
+ * A non-recursive implementation of the
+ * <a href="https://www.rfc-editor.org/rfc/rfc8785">RFC 8785 JSON
+ * Canonicalization Scheme (JCS)</a>.
  *
  * <p>
  * This class provides the primary API for canonicalizing Java object structures
  * (such as Map, Collection, String, Number, Boolean, or null) into a
- * deterministic string representation and for comparing Java objects for
+ * deterministic byte array representation and for comparing Java objects for
  * canonical equality. All methods are static and thread-safe.
- * </p>
- *
- * <p>
- * The implementation is completely agnostic by using the
- * {@link com.apicatalog.tree.io.TreeTraverser} abstraction to interact with
- * structures.
  * </p>
  *
  * <h2>Usage Examples</h2>
  * 
  * <pre>{@code
  * // Canonicalize a Java object and get the result as a String
- * String canonical = Jcs.canonize(javaObject);
+ * byte[] canonical = Jcs.canonize(javaObject);
  *
  * // Canonicalize a Java object and write to a Writer
  * Jcs.canonize(javaObject, writer);
@@ -59,10 +57,21 @@ import com.apicatalog.tree.io.java.NativeTraverser;
  * }</pre>
  *
  * @see #canonize(Object)
+ * @see #canonize(Object, int)
  * @see #equals(Object, Object)
  */
-public class Jcs {
+public final class Jcs {
 
+    public static byte[] NULL = "null".getBytes(StandardCharsets.UTF_8);
+    public static byte[] TRUE = "true".getBytes(StandardCharsets.UTF_8);
+    public static byte[] FALSE = "false".getBytes(StandardCharsets.UTF_8);
+    public static byte[] EMPTY_MAP = "{}".getBytes(StandardCharsets.UTF_8);
+    public static byte[] EMPTY_ARRAY = "[]".getBytes(StandardCharsets.UTF_8);
+
+    private Jcs() { 
+        //protected
+    }
+    
     /**
      * Compares two map entries by their string keys lexicographically.
      *
@@ -85,60 +94,134 @@ public class Jcs {
     }
 
     /**
-     * Compares two scalar nodes for canonical equality using agnostic cursors.
-     *
-     * <p>
-     * Two scalar nodes are canonically equal if they represent equivalent scalar
-     * types (null, boolean, string, or number) and their normalized values match
-     * according to JCS rules.
-     * </p>
-     *
-     * @param cursor1 the first agnostic {@link TreeCursor} pointing to a scalar
-     *                node
-     * @param cursor2 the second agnostic {@link TreeCursor} pointing to a scalar
-     *                node
-     * @return {@code true} if the scalar values are canonically equal,
-     *         {@code false} otherwise
-     * @throws IllegalArgumentException if a cursor points to a non-scalar node type
-     */
-    public static boolean scalarEquals(TreeCursor cursor1, TreeCursor cursor2) {
-        return switch (cursor1.nodeType()) {
-        case NULL, TRUE, FALSE -> true;
-
-        case STRING -> Arrays.equals(escape(cursor1.stringValue()), escape(cursor2.stringValue()));
-
-        case NUMBER -> Arrays.equals(canonizeNumber(cursor1.numberValue()), canonizeNumber(cursor2.numberValue()));
-
-        default -> throw new IllegalArgumentException("Expected scalar node but got " + cursor1.nodeType());
-        };
-    }
-
-    /**
      * Canonicalizes a Java object (such as Map, Collection, String, Number,
      * Boolean, or null) according to JCS (RFC 8785) and returns the result as a
-     * {@link String}.
+     * byte array.
      *
      * @param value the Java object to canonicalize (can be {@code null})
      * @return byte array containing the canonical representation
      */
     public static byte[] canonize(final Object value) {
-        return switch (value) {
-        case null -> JcsEmitter.NULL;
-        case Boolean bool -> bool ? JcsEmitter.TRUE : JcsEmitter.FALSE;
-        case Number number -> canonizeNumber(number);
-        case String string -> escape(string);
-        default -> {
-            try {
-                var bos = new ByteArrayOutputStream();
-                canonize(value, bos);
-                yield bos.toByteArray();
+        return canonize(value, -1);
+    }
 
-            } catch (IOException e) {
-                // should not happen for StringWriter()
-                throw new IllegalStateException(e);
+    /**
+     * Canonicalizes a Java object (such as Map, Collection, String, Number,
+     * Boolean, or null) according to JCS (RFC 8785) and returns the result as a
+     * byte array.
+     *
+     * @param value      the Java object to canonicalize (can be {@code null})
+     * @param maxVisited the maximum number of nodes to traverse, {@code -1} for
+     *                   unlimited
+     * @return byte array containing the canonical representation
+     */
+    public static byte[] canonize(final Object value, final int maxVisited) {
+        return switch (value) {
+        case null -> NULL;
+        case Boolean bool -> bool ? TRUE : FALSE;
+        case Number number -> canonizeNumber(number);
+        case String string -> escapedString(string);
+        case Map<?, ?> map -> {
+            if (map.isEmpty()) {
+                yield EMPTY_MAP;
             }
+
+            var entries = new ArrayList<>(map.entrySet());
+            Collections.sort(entries, Jcs::entryKeyComparator);
+            var queue = new ArrayDeque<>();
+            queue.push('}');
+            queue.push(entries.iterator());
+            queue.push('{');
+            yield c14n(queue, maxVisited);
         }
+        case Collection<?> col -> {
+            if (col.isEmpty()) {
+                yield EMPTY_ARRAY;
+            }
+
+            var queue = new ArrayDeque<>();
+            queue.push(']');
+            queue.push(col.iterator());
+            queue.push('[');
+            yield c14n(queue, maxVisited);
+        }
+        default -> throw new IllegalArgumentException("Unsupported type " + value);
         };
+    }
+
+    private static byte[] c14n(final Deque<Object> stack, int maxVisited) {
+
+        var bos = new ByteArrayOutputStream();
+        int visited = 0;
+
+        try {
+            do {
+                var item = stack.peek();
+
+                if (item instanceof Iterator<?> it) {
+                    if (it.hasNext()) {
+
+                        var element = it.next();
+
+                        if (maxVisited > 0 && visited++ > maxVisited) {
+                            throw new IllegalStateException(
+                                    "The maximum visited nodes limit has exceeded, maxVisited=" + maxVisited);
+                        }
+
+                        if (it.hasNext()) {
+                            stack.push(',');
+                        } else {
+                            stack.pop();
+                        }
+
+                        if (element instanceof Entry entry) {
+                            bos.write(escapedString((String) entry.getKey()));
+                            bos.write(':');
+                            c14n(entry.getValue(), stack, bos);
+
+                        } else {
+                            c14n(element, stack, bos);
+                        }
+
+                    } else {
+                        stack.pop();
+                    }
+
+                } else if (item instanceof Character ch) {
+                    bos.write(ch);
+                    stack.pop();
+                }
+
+            } while (!stack.isEmpty());
+
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return bos.toByteArray();
+    }
+
+    private static void c14n(Object value, Deque<Object> stack, OutputStream os) throws IOException {
+
+        switch (value) {
+        case null -> os.write(NULL);
+        case Boolean bool -> os.write(bool ? TRUE : FALSE);
+        case Number number -> os.write(canonizeNumber(number));
+        case String string -> os.write(escapedString(string));
+        case Map<?, ?> map -> {
+            var entries = new ArrayList<>(map.entrySet());
+            Collections.sort(entries, Jcs::entryKeyComparator);
+            stack.push('}');
+            stack.push(entries.iterator());
+            stack.push('{');
+        }
+        case Collection<?> col -> {
+            stack.push(']');
+            stack.push(col.iterator());
+            stack.push('[');
+        }
+        default -> throw new IllegalArgumentException("Unsupported type " + value);
+        }
+        ;
     }
 
     /**
@@ -152,53 +235,19 @@ public class Jcs {
      * @throws IOException if an error occurs during canonicalization processing or
      *                     writing
      */
-    public static void canonize(final Object value, OutputStream os) throws IOException {
-        switch (value) {
-        case null -> os.write(JcsEmitter.NULL);
-        case Boolean bool -> os.write(bool ? JcsEmitter.TRUE : JcsEmitter.FALSE);
-        case Number number -> os.write(canonizeNumber(number));
-        case String string -> os.write(escape(string));
-        default -> canonize(new NativeTraverser(value, Jcs::entryKeyComparator), os);
-        }
-        ;
-    }
-
-    /**
-     * Canonicalizes structure agnostic traversal according to JCS (RFC 8785) and
-     * returns the result as a {@link String}. The {@link TreeTraverser} must have
-     * set {@link TreeTraverser#comparator(java.util.Comparator)} to
-     * {@link #entryKeyComparator(Entry, Entry)} equivalent.
-     *
-     * @param traverser the agnostic {@link TreeTraverser} to canonicalize
-     * @return byte array containing the canonical representation
-     */
-    protected static byte[] canonize(TreeTraverser<?> traverser) {
-        try {
-            var bos = new ByteArrayOutputStream();
-            canonize(traverser, bos);
-            return bos.toByteArray();
-        } catch (IOException e) {
-            // should not happen for StringWriter()
-            throw new IllegalStateException(e);
-        }
-    }
-
-    /**
-     * Canonicalizes structure agnostic traversal according to JCS (RFC 8785) and
-     * writes the output to the provided {@link OutputStream}. The
-     * {@link TreeTraverser} must have set
-     * {@link TreeTraverser#comparator(java.util.Comparator)} to
-     * {@link #entryKeyComparator(Entry, Entry)} equivalent.
-     *
-     * @param traverser the agnostic {@link TreeTraverser} to canonicalize
-     * @param os        the {@link OutputStream} to which the canonical output is
-     *                  written
-     * @throws IOException if an error occurs during canonicalization processing or
-     *                     writing
-     */
-    protected static void canonize(TreeTraverser<?> traverser, OutputStream os) throws IOException {
-        Tree.write(traverser, new JcsEmitter(os));
-    }
+//    public static void canonize(final Object value, OutputStream os) throws IOException {
+//        switch (value) {
+//        case null -> os.write(JcsEmitter.NULL);
+//        case Boolean bool -> os.write(bool ? JcsEmitter.TRUE : JcsEmitter.FALSE);
+//        case Number number -> os.write(canonizeNumber(number));
+//        case String string -> os.write(escape(string));
+//        case Map<?, ?> map -> {
+//            new Jcs(map).canonize();
+//        }
+//        default -> canonize(new NativeTraverser(value, Jcs::entryKeyComparator), os);
+//        }
+//        ;
+//    }
 
     /**
      * Compares two Java objects (such as Map, Collection, String, Number, Boolean,
@@ -215,17 +264,17 @@ public class Jcs {
      * @return {@code true} if the values are canonically equal, {@code false}
      *         otherwise
      */
-    public static boolean equals(final Object value1, final Object value2) {
-
-        var cursor1 = new NativeTraverser(value1, Jcs::entryKeyComparator);
-        var cursor2 = new NativeTraverser(value2, Jcs::entryKeyComparator);
-
-        return equals(cursor1, cursor2);
-    }
-
-    protected static boolean equals(TreeTraverser<?> node1, TreeTraverser<?> node2) {
-        return Tree.identical(node1, node2, Jcs::scalarEquals);
-    }
+//    public static boolean equals(final Object value1, final Object value2) {
+//
+//        var cursor1 = new NativeTraverser(value1, Jcs::entryKeyComparator);
+//        var cursor2 = new NativeTraverser(value2, Jcs::entryKeyComparator);
+//
+//        return equals(cursor1, cursor2);
+//    }
+//
+//    protected static boolean equals(TreeTraverser<?> node1, TreeTraverser<?> node2) {
+//        return Tree.identical(node1, node2, Jcs::scalarEquals);
+//    }
 
     /**
      * Canonicalizes as JSON number according to JCS (RFC 8785).
@@ -356,10 +405,12 @@ public class Jcs {
      * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
      *                                  detected
      */
-    static byte[] escape(String value) {
+    static byte[] escapedString(String value) {
         final int length = value.length();
-        final ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(length, 16));
+        final ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(length + 2, 18));
         final HexFormat hexFormat = HexFormat.of();
+
+        out.write('"');
 
         for (int i = 0; i < length;) {
             int ch = value.codePointAt(i);
@@ -426,6 +477,7 @@ public class Jcs {
             }
             i += Character.charCount(ch);
         }
+        out.write('"');
         return out.toByteArray();
     }
 }

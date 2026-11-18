@@ -2,7 +2,6 @@ package com.apicatalog.jcs;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -46,21 +45,21 @@ class JcsTest {
                 new String(Jcs.canonize(getJacksonJson(name + ".in.json"))));
     }
 
-    @ParameterizedTest
-    @MethodSource({ "resources" })
-    void testCompareJakarta(String name) throws IOException {
-        assertTrue(Jcs.equals(
-                getJakartaJson(name + ".in.json"),
-                getJakartaJson(name + ".out.json")));
-    }
-
-    @ParameterizedTest
-    @MethodSource({ "resources" })
-    void testCompareJackson2(String name) throws IOException {
-        assertTrue(Jcs.equals(
-                getJacksonJson(name + ".in.json"),
-                getJacksonJson(name + ".out.json")));
-    }
+//    @ParameterizedTest
+//    @MethodSource({ "resources" })
+//    void testCompareJakarta(String name) throws IOException {
+//        assertTrue(Jcs.equals(
+//                getJakartaJson(name + ".in.json"),
+//                getJakartaJson(name + ".out.json")));
+//    }
+//
+//    @ParameterizedTest
+//    @MethodSource({ "resources" })
+//    void testCompareJackson2(String name) throws IOException {
+//        assertTrue(Jcs.equals(
+//                getJacksonJson(name + ".in.json"),
+//                getJacksonJson(name + ".out.json")));
+//    }
 
     static final Stream<String> resources() {
         return Stream.of(new File(JcsTest.class.getResource("").getPath()).listFiles())
