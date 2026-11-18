@@ -283,6 +283,27 @@ public final class Jcs {
      *         otherwise
      */
     public static boolean equals(final Object a, final Object b) {
+        return equals(a, b, -1);
+    }
+
+    /**
+     * Compares two Java objects (such as Map, Collection, String, Number, Boolean,
+     * or null) for canonical equality under JCS (RFC 8785).
+     *
+     * <p>
+     * Two Java objects are canonically equal if their data models are equivalent.
+     * This involves comparing numbers by their canonical string representation and
+     * objects/maps by their members, sorted lexicographically by key.
+     * </p>
+     *
+     * @param a          the first Java object to compare (can be {@code null})
+     * @param b          the second Java object to compare (can be {@code null})
+     * @param maxVisited the maximum number of nodes to traverse, {@code -1} for
+     *                   unlimited
+     * @return {@code true} if the values are canonically equal, {@code false}
+     *         otherwise
+     */
+    public static boolean equals(final Object a, final Object b, int maxVisited) {
 
         if (a == b) {
             return true;
@@ -311,7 +332,7 @@ public final class Jcs {
 
             var stack = new ArrayDeque<Iterator<?>[]>();
 
-            return mapEquals(stack, ma, mb) && equals(stack);
+            return mapEquals(stack, ma, mb) && equals(stack, maxVisited);
 
         } else if (a instanceof Collection ca
                 && b instanceof Collection cb) {
@@ -319,14 +340,14 @@ public final class Jcs {
             if (ca.size() != cb.size()) {
                 return false;
             }
-            
+
             if (ca.isEmpty()) {
                 return true;
             }
 
             var stack = new ArrayDeque<Iterator<?>[]>();
             stack.push(new Iterator[] { ca.iterator(), cb.iterator() });
-            return equals(stack);
+            return equals(stack, maxVisited);
         }
 
         return false;
@@ -349,10 +370,17 @@ public final class Jcs {
         stack.push(new Iterator[] { ka.iterator(), kb.iterator() });
         return true;
     }
-    
-    private static boolean equals(Deque<Iterator<?>[]> stack) {
+
+    private static boolean equals(Deque<Iterator<?>[]> stack, int maxVisited) {
+
+        int visited = 0;
 
         do {
+
+            if (maxVisited > 0 && visited++ > maxVisited) {
+                throw new IllegalStateException(
+                        "The maximum visited nodes limit has exceeded, maxVisited=" + maxVisited);
+            }
 
             var its = stack.peek();
 
