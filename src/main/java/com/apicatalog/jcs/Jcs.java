@@ -192,53 +192,49 @@ public final class Jcs {
         }
     }
 
-    private static void c14n(final Deque<Object> stack, OutputStream os, int maxVisited) {
+    private static void c14n(final Deque<Object> stack, OutputStream os, int maxVisited) throws IOException {
 
         int visited = 0;
 
-        try {
-            do {
-                var item = stack.peek();
+        do {
+            var item = stack.peek();
 
-                if (item instanceof Iterator<?> it) {
+            if (item instanceof Iterator<?> it) {
+                if (it.hasNext()) {
+
+                    var element = it.next();
+
+                    if (maxVisited > 0 && visited++ > maxVisited) {
+                        throw new IllegalStateException(
+                                "The maximum visited nodes limit has exceeded, maxVisited=" + maxVisited);
+                    }
+
                     if (it.hasNext()) {
-
-                        var element = it.next();
-
-                        if (maxVisited > 0 && visited++ > maxVisited) {
-                            throw new IllegalStateException(
-                                    "The maximum visited nodes limit has exceeded, maxVisited=" + maxVisited);
-                        }
-
-                        if (it.hasNext()) {
-                            stack.push(',');
-                        } else {
-                            stack.pop();
-                        }
-
-                        if (element instanceof Entry entry) {
-                            os.write(escapedString((String) entry.getKey()));
-                            os.write(':');
-                            c14n(entry.getValue(), stack, os);
-
-                        } else {
-                            c14n(element, stack, os);
-                        }
-
+                        stack.push(',');
                     } else {
                         stack.pop();
                     }
 
-                } else if (item instanceof Character ch) {
-                    os.write(ch);
+                    if (element instanceof Entry entry) {
+                        os.write(escapedString((String) entry.getKey()));
+                        os.write(':');
+                        c14n(entry.getValue(), stack, os);
+
+                    } else {
+                        c14n(element, stack, os);
+                    }
+
+                } else {
                     stack.pop();
                 }
 
-            } while (!stack.isEmpty());
+            } else if (item instanceof Character ch) {
+                os.write(ch);
+                stack.pop();
+            }
 
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        } while (!stack.isEmpty());
+
     }
 
     private static void c14n(Object value, Deque<Object> stack, OutputStream os) throws IOException {
@@ -430,84 +426,109 @@ public final class Jcs {
      * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
      *                                  detected
      */
-    static byte[] escapedString(String value) {
-        
+    public static byte[] escapedString(String value) {
+
         if (value.length() == 0) {
             return EMPTY_STRING;
         }
-        
-        final int length = value.length();
-        final ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(length + 2, 18));
-        final HexFormat hexFormat = HexFormat.of();
+
+        final var out = new ByteArrayOutputStream(Math.max(value.length(), 16) + 2);
 
         out.write('"');
+        escape(value, out);
+        out.write('"');
 
-        for (int i = 0; i < length;) {
+        return out.toByteArray();
+    }
+
+    /**
+     * Escapes a string according to JCS (RFC 8785, Section 2.5) rules and encodes
+     * the result directly to a UTF-8 byte array.
+     *
+     * @param value the string to escape
+     * @return the escaped UTF-8 byte array
+     * @throws IllegalArgumentException if invalid Unicode data (lone surrogates) is
+     *                                  detected
+     */
+    static byte[] escape(String value) {
+
+        if (value.length() == 0) {
+            return new byte[0];
+        }
+
+        final var out = new ByteArrayOutputStream(Math.max(value.length(), 16));
+        escape(value, out);
+        return out.toByteArray();
+    }
+
+    private static void escape(String value, ByteArrayOutputStream os) {
+
+        final HexFormat hexFormat = HexFormat.of();
+
+        for (int i = 0; i < value.length();) {
             int ch = value.codePointAt(i);
             switch (ch) {
             case '\t' -> {
-                out.write('\\');
-                out.write('t');
+                os.write('\\');
+                os.write('t');
             }
             case '\b' -> {
-                out.write('\\');
-                out.write('b');
+                os.write('\\');
+                os.write('b');
             }
             case '\n' -> {
-                out.write('\\');
-                out.write('n');
+                os.write('\\');
+                os.write('n');
             }
             case '\r' -> {
-                out.write('\\');
-                out.write('r');
+                os.write('\\');
+                os.write('r');
             }
             case '\f' -> {
-                out.write('\\');
-                out.write('f');
+                os.write('\\');
+                os.write('f');
             }
             case '\"' -> {
-                out.write('\\');
-                out.write('"');
+                os.write('\\');
+                os.write('"');
             }
             case '\\' -> {
-                out.write('\\');
-                out.write('\\');
+                os.write('\\');
+                os.write('\\');
             }
             default -> {
                 if (ch <= 0x1F) {
-                    out.write('\\');
-                    out.write('u');
-                    out.write('0');
-                    out.write('0');
-                    out.write(hexFormat.toHighHexDigit((byte) ch));
-                    out.write(hexFormat.toLowHexDigit((byte) ch));
+                    os.write('\\');
+                    os.write('u');
+                    os.write('0');
+                    os.write('0');
+                    os.write(hexFormat.toHighHexDigit((byte) ch));
+                    os.write(hexFormat.toLowHexDigit((byte) ch));
 
                 } else if (ch >= 0xD800 && ch <= 0xDFFF) {
                     throw new IllegalArgumentException(
                             "RFC 8785 Compliance Error: Invalid Unicode data (lone surrogate) detected at index " + i);
                 } else if (ch <= 0x7F) {
-                    out.write(ch);
+                    os.write(ch);
 
                 } else if (ch <= 0x7FF) {
-                    out.write(0xC0 | (ch >> 6));
-                    out.write(0x80 | (ch & 0x3F));
+                    os.write(0xC0 | (ch >> 6));
+                    os.write(0x80 | (ch & 0x3F));
 
                 } else if (ch <= 0xFFFF) {
-                    out.write(0xE0 | (ch >> 12));
-                    out.write(0x80 | ((ch >> 6) & 0x3F));
-                    out.write(0x80 | (ch & 0x3F));
+                    os.write(0xE0 | (ch >> 12));
+                    os.write(0x80 | ((ch >> 6) & 0x3F));
+                    os.write(0x80 | (ch & 0x3F));
 
                 } else {
-                    out.write(0xF0 | (ch >> 18));
-                    out.write(0x80 | ((ch >> 12) & 0x3F));
-                    out.write(0x80 | ((ch >> 6) & 0x3F));
-                    out.write(0x80 | (ch & 0x3F));
+                    os.write(0xF0 | (ch >> 18));
+                    os.write(0x80 | ((ch >> 12) & 0x3F));
+                    os.write(0x80 | ((ch >> 6) & 0x3F));
+                    os.write(0x80 | (ch & 0x3F));
                 }
             }
             }
             i += Character.charCount(ch);
         }
-        out.write('"');
-        return out.toByteArray();
     }
 }
