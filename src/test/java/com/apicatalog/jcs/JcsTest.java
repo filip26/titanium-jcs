@@ -1,15 +1,14 @@
 package com.apicatalog.jcs;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -17,32 +16,32 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.apicatalog.tree.io.Tree;
-import com.apicatalog.tree.io.jakarta.JakartaParser;
 import com.apicatalog.tree.io.jakcson.Jackson2Parser;
 import com.fasterxml.jackson.core.JsonFactory;
 
-import jakarta.json.Json;
-import jakarta.json.stream.JsonParserFactory;
-
 class JcsTest {
 
-    static JsonParserFactory JAKARTA = Json.createParserFactory(Map.of());
     static JsonFactory JACKSON = JsonFactory.builder().build();
 
     @ParameterizedTest
     @MethodSource({ "resources" })
-    void testCanonizeJakarta(String name) throws IOException {
+    void testCanonizeToBytes(String name) throws IOException {
         assertArrayEquals(
                 getBytes(name + ".out.json"),
-                Jcs.canonize(getJakartaJson(name + ".in.json")));
+                Jcs.canonize(getJacksonJson(name + ".in.json")));
     }
 
     @ParameterizedTest
     @MethodSource({ "resources" })
-    void testCanonizeJackson2(String name) throws IOException {
-        assertEquals(
-                new String(getBytes(name + ".out.json")),
-                new String(Jcs.canonize(getJacksonJson(name + ".in.json"))));
+    void testCanonizeToStream(String name) throws IOException {
+
+        var bos = new ByteArrayOutputStream();
+
+        Jcs.canonize(getJacksonJson(name + ".in.json"), bos);
+
+        assertArrayEquals(
+                getBytes(name + ".out.json"),
+                bos.toByteArray());
     }
 
 //    @ParameterizedTest
@@ -78,11 +77,11 @@ class JcsTest {
         }
     }
 
-    static Object getJakartaJson(String name) throws IOException {
-        try (var parser = JakartaParser.newParser(JcsTest.class.getResourceAsStream(name), JAKARTA)) {
-            return Tree.read(parser);
-        }
-    }
+//    static Object getJakartaJson(String name) throws IOException {
+//        try (var parser = JakartaParser.newParser(JcsTest.class.getResourceAsStream(name), JAKARTA)) {
+//            return Tree.read(parser);
+//        }
+//    }
 
     static Object getJacksonJson(String name) throws IOException {
         try (var parser = Jackson2Parser.newParser(JcsTest.class.getResourceAsStream(name), JACKSON)) {

@@ -68,10 +68,10 @@ public final class Jcs {
     public static byte[] EMPTY_MAP = "{}".getBytes(StandardCharsets.UTF_8);
     public static byte[] EMPTY_ARRAY = "[]".getBytes(StandardCharsets.UTF_8);
 
-    private Jcs() { 
-        //protected
+    private Jcs() {
+        // protected
     }
-    
+
     /**
      * Compares two map entries by their string keys lexicographically.
      *
@@ -126,32 +126,73 @@ public final class Jcs {
                 yield EMPTY_MAP;
             }
 
-            var entries = new ArrayList<>(map.entrySet());
-            Collections.sort(entries, Jcs::entryKeyComparator);
-            var queue = new ArrayDeque<>();
-            queue.push('}');
-            queue.push(entries.iterator());
-            queue.push('{');
-            yield c14n(queue, maxVisited);
+            var stack = new ArrayDeque<>();
+            var bos = new ByteArrayOutputStream();
+            try {
+                c14n(value, stack, bos);
+                c14n(stack, bos, maxVisited);
+                yield bos.toByteArray();
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
         }
         case Collection<?> col -> {
             if (col.isEmpty()) {
                 yield EMPTY_ARRAY;
             }
 
-            var queue = new ArrayDeque<>();
-            queue.push(']');
-            queue.push(col.iterator());
-            queue.push('[');
-            yield c14n(queue, maxVisited);
+            var stack = new ArrayDeque<>();
+            var bos = new ByteArrayOutputStream();
+            try {
+                c14n(value, stack, bos);
+                c14n(stack, bos, maxVisited);
+                yield bos.toByteArray();
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
         }
         default -> throw new IllegalArgumentException("Unsupported type " + value);
         };
     }
 
-    private static byte[] c14n(final Deque<Object> stack, int maxVisited) {
+    /**
+     * Canonicalizes a Java object (such as Map, Collection, String, Number,
+     * Boolean, or null) according to JCS (RFC 8785) and writes the output to the
+     * provided {@link OutputStream}.
+     *
+     * @param value the Java object to canonicalize (can be {@code null})
+     * @param os    the {@link OutputStream} to which the canonical output is
+     *              written
+     * @throws IOException if an error occurs during canonicalization processing or
+     *                     writing
+     */
+    public static void canonize(final Object value, OutputStream os) throws IOException {
+        canonize(value, os, -1);
+    }
 
-        var bos = new ByteArrayOutputStream();
+    /**
+     * Canonicalizes a Java object (such as Map, Collection, String, Number,
+     * Boolean, or null) according to JCS (RFC 8785) and writes the output to the
+     * provided {@link OutputStream}.
+     *
+     * @param value      the Java object to canonicalize (can be {@code null})
+     * @param os         the {@link OutputStream} to which the canonical output is
+     *                   written
+     * @param maxVisited the maximum number of nodes to traverse, {@code -1} for
+     *                   unlimited
+     * @throws IOException if an error occurs during canonicalization processing or
+     *                     writing
+     */
+    public static void canonize(final Object value, OutputStream os, int maxVisited) throws IOException {
+        var stack = new ArrayDeque<>();
+        c14n(value, stack, os);
+        if (!stack.isEmpty()) {
+            c14n(stack, os, maxVisited);
+        }
+    }
+
+    private static void c14n(final Deque<Object> stack, OutputStream os, int maxVisited) {
+
         int visited = 0;
 
         try {
@@ -175,12 +216,12 @@ public final class Jcs {
                         }
 
                         if (element instanceof Entry entry) {
-                            bos.write(escapedString((String) entry.getKey()));
-                            bos.write(':');
-                            c14n(entry.getValue(), stack, bos);
+                            os.write(escapedString((String) entry.getKey()));
+                            os.write(':');
+                            c14n(entry.getValue(), stack, os);
 
                         } else {
-                            c14n(element, stack, bos);
+                            c14n(element, stack, os);
                         }
 
                     } else {
@@ -188,7 +229,7 @@ public final class Jcs {
                     }
 
                 } else if (item instanceof Character ch) {
-                    bos.write(ch);
+                    os.write(ch);
                     stack.pop();
                 }
 
@@ -197,7 +238,6 @@ public final class Jcs {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        return bos.toByteArray();
     }
 
     private static void c14n(Object value, Deque<Object> stack, OutputStream os) throws IOException {
@@ -208,6 +248,12 @@ public final class Jcs {
         case Number number -> os.write(canonizeNumber(number));
         case String string -> os.write(escapedString(string));
         case Map<?, ?> map -> {
+
+            if (map.isEmpty()) {
+                os.write(EMPTY_MAP);
+                return;
+            }
+
             var entries = new ArrayList<>(map.entrySet());
             Collections.sort(entries, Jcs::entryKeyComparator);
             stack.push('}');
@@ -215,6 +261,10 @@ public final class Jcs {
             stack.push('{');
         }
         case Collection<?> col -> {
+            if (col.isEmpty()) {
+                os.write(EMPTY_ARRAY);
+                return;
+            }
             stack.push(']');
             stack.push(col.iterator());
             stack.push('[');
@@ -223,31 +273,6 @@ public final class Jcs {
         }
         ;
     }
-
-    /**
-     * Canonicalizes a Java object (such as Map, Collection, String, Number,
-     * Boolean, or null) according to JCS (RFC 8785) and writes the output to the
-     * provided {@link OutputStream}.
-     *
-     * @param value the Java object to canonicalize (can be {@code null})
-     * @param os    the {@link OutputStream} to which the canonical output is
-     *              written
-     * @throws IOException if an error occurs during canonicalization processing or
-     *                     writing
-     */
-//    public static void canonize(final Object value, OutputStream os) throws IOException {
-//        switch (value) {
-//        case null -> os.write(JcsEmitter.NULL);
-//        case Boolean bool -> os.write(bool ? JcsEmitter.TRUE : JcsEmitter.FALSE);
-//        case Number number -> os.write(canonizeNumber(number));
-//        case String string -> os.write(escape(string));
-//        case Map<?, ?> map -> {
-//            new Jcs(map).canonize();
-//        }
-//        default -> canonize(new NativeTraverser(value, Jcs::entryKeyComparator), os);
-//        }
-//        ;
-//    }
 
     /**
      * Compares two Java objects (such as Map, Collection, String, Number, Boolean,

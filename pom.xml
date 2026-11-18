@@ -59,7 +59,6 @@
         <!--  test resources -->
         <tree-io.version>1.0.0-M2</tree-io.version>
         <junit.version>6.0.1</junit.version>
-        <jakarta.json.version>2.0.1</jakarta.json.version>
     </properties>
 
     <dependencies>
@@ -80,18 +79,6 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
             <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.apicatalog</groupId>
-            <artifactId>tree-io-jakarta</artifactId>
-            <version>${tree-io.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>jakarta.json</artifactId>
-            <version>${jakarta.json.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
