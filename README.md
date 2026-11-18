@@ -46,7 +46,8 @@ var result = Jcs.canonize(value);
 // Or canonicalize a value and write the canonical JSON to an output stream
 Jcs.canonize(value, os);
 
-// Set maximum visited nodes limit to prevent resource exhaustion and denial-of-service from overly complex or deeply nested structures
+// Set maximum visited nodes limit to prevent resource exhaustion and 
+// denial-of-service from overly complex or deeply nested structures
 var result = Jcs.canonize(value, 1000);
 
 // Compare two values for canonical equality
